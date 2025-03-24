@@ -1,0 +1,37 @@
+[
+  {
+    "objectID": "about.html",
+    "href": "about.html",
+    "title": "About",
+    "section": "",
+    "text": "About this site"
+  },
+  {
+    "objectID": "posts/emotions_classifier/index.html",
+    "href": "posts/emotions_classifier/index.html",
+    "title": "Training an Emotional Face Classifier",
+    "section": "",
+    "text": "Ok I have been trying to get this thing posted for weeks and its finally time now. First step, what am I even doing. Well, broadly the goal is to get a decent understanding of deep learning concepts and apply them to subject matter I find interesting. I see this stage as learning to read sheet music and musc theory before I can create compositions.\nThe first step is going to be training the model. It’s taken me a while to decide what I want to train it on. Originally I wanted to do something music related, but now the desire to get something UP and POSTED has made me go with my first idea of emotion recognition in human faces."
+  },
+  {
+    "objectID": "posts/emotions_classifier/index.html#local-environment-detour",
+    "href": "posts/emotions_classifier/index.html#local-environment-detour",
+    "title": "Training an Emotional Face Classifier",
+    "section": "Local Environment Detour",
+    "text": "Local Environment Detour\nOk, its around here that I had to shift gears to set up my own local fastai and jupyter environment on my ML desktop. Long story short I built an ML workstation for this purpose. I needed to do this because I’m having trouble understanding how the cleaner modifies files and I can understand a local filesystem more clearly than google drive’s (w/ colab).\nAlso, if you’ve ever tried to make a local ML environment than you’ll know how PERSNICKITY this process can be (read: highly specific and thorny). So anyway, this is what I’ve been doing for the last day or so. Also, my latop broke and the first one I ordered to replace it DID NOT COME WITH A KEYBOARD 🙃\nWe soldier on…\nNow I have edited the files in the original path. Some were moved and others were deleted. If I rebuild another dataloader from the original path it should be more accurate this time!"
+  },
+  {
+    "objectID": "posts/emotions_classifier/index.html#epilogue",
+    "href": "posts/emotions_classifier/index.html#epilogue",
+    "title": "Training an Emotional Face Classifier",
+    "section": "Epilogue",
+    "text": "Epilogue\nLater I wanted to see if I could get better performance with the model if I got into all the images and modified them individually like in the cleaner. It took me roughly a half hour, and tI couldn’t get it better than the second round of training. So, my assumption is that this problem (automating facial emotion ndetection) is simply non-trivial and there may be other ways to approach it. Also, determining the emotions of a face in a photo is highly subjective which could be another reason I’m not seeing better results.\nI was really surprised by how much of an effective time save using the cleaner turned out to be! The first time I used it it took around 5 minutes and I got the same results as my 30 minutes image crawl of 600 pictures."
+  },
+  {
+    "objectID": "index.html",
+    "href": "index.html",
+    "title": "myblog",
+    "section": "",
+    "text": "This is a Quarto website.\nTo learn more about Quarto websites visit https://quarto.org/docs/websites."
+  }
+]
