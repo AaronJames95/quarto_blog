@@ -2,6 +2,7 @@
 title: "myblog"
 ---
 
-This is a Quarto website.
+## Latest Project
 
-To learn more about Quarto websites visit <https://quarto.org/docs/websites>.
+Check out my recent post:  
+👉 [Emotion Classifier](posts/emotions_classifier/)
