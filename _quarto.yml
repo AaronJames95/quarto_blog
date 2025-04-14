@@ -1,9 +1,11 @@
 project:
   type: website
-  output-dir: docs    
+  output-dir: docs
+
 
 website:
   title: "Learning Learning"
+  site-url: https://aaronjames95.github.io/quarto_blog/    
   navbar:
     left:
       - text: Home
