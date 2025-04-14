@@ -1,9 +1,13 @@
-## Latest Project
-
-Check out my recent posts:  
-
-👉 [Classifying MNIST Digits (1)](/posts/2025_04_14_MNIST_p1/)
-
-👉 [Classifying MNIST Digits (2)](posts/2025_04_14_MNIST_p2/)
-
+---
+title: "Posts"
+listing: 
+  contents: posts
+  sort: "date desc"
+  type: default
+  categories: true
+  sort-ui: false
+  filter-ui: false
+page-layout: full
+title-block-banner: true
+---
 
