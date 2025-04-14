@@ -1,7 +1,7 @@
 ---
 title: "Aaron James"
 about:
-  template: trestles
+  template: broadside
   image: profile.jpg
   links:
     - icon: twitter
