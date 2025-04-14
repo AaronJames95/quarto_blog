@@ -1,0 +1,1502 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.6.42">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="Aaron James">
+<meta name="dcterms.date" content="2025-04-14">
+
+<title>Classifying MNIST Digits (part 2) – Learning Learning</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { display: inline-block; text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js" integrity="sha512-bLT0Qm9VnAYZDflyKcBaQ2gg0hSYNQrJ8RilYldYQ1FxQYoCLtUjuuRuZo+fjqhx/qtq/1itJ0C2ejDxltZVFg==" crossorigin="anonymous"></script><script src="../../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../../">
+<script src="../../site_libs/quarto-html/quarto.js"></script>
+<script src="../../site_libs/quarto-html/popper.min.js"></script>
+<script src="../../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../../site_libs/quarto-html/quarto-syntax-highlighting-dark-b53751a350365c71b6c909e95f209ed1.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../../site_libs/bootstrap/bootstrap-cbb8612797ca2f5ea6d72598314dc22e.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="dark">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" integrity="sha512-c3Nl8+7g4LMSTdrm621y7kf9v3SDPnhxLNhcjFJbKECVnmZHTdo+IRO05sNLTH/D3vA6u1X32ehoLC7WFVdheg==" crossorigin="anonymous"></script>
+
+<script type="application/javascript">define('jquery', [],function() {return window.jQuery;})</script>
+
+  <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN") {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
+
+</head>
+
+<body class="nav-fixed">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+    <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container mx-auto">
+    <a class="navbar-brand" href="../../index.html">
+    <span class="navbar-title">Learning Learning</span>
+    </a>
+  </div>
+            <div id="quarto-search" class="" title="Search"></div>
+          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" role="menu" aria-expanded="false" aria-label="Toggle navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+  <span class="navbar-toggler-icon"></span>
+</button>
+          <div class="collapse navbar-collapse" id="navbarCollapse">
+            <ul class="navbar-nav navbar-nav-scroll me-auto">
+  <li class="nav-item">
+    <a class="nav-link" href="../../index.html"> 
+<span class="menu-text">Home</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../../blog.html"> 
+<span class="menu-text">Posts</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../../about.html"> 
+<span class="menu-text">About</span></a>
+  </li>  
+</ul>
+          </div> <!-- /navcollapse -->
+            <div class="quarto-navbar-tools">
+</div>
+      </div> <!-- /container-fluid -->
+    </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
+<!-- sidebar -->
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#training-a-digit-classification-model-using-mnist-dataset-part-2" id="toc-training-a-digit-classification-model-using-mnist-dataset-part-2" class="nav-link active" data-scroll-target="#training-a-digit-classification-model-using-mnist-dataset-part-2">Training a Digit Classification Model using MNIST Dataset (part 2)</a>
+  <ul class="collapse">
+  <li><a href="#machine-learning-vs-deep-learning" id="toc-machine-learning-vs-deep-learning" class="nav-link" data-scroll-target="#machine-learning-vs-deep-learning">Machine Learning vs Deep Learning</a></li>
+  <li><a href="#explaining-learning" id="toc-explaining-learning" class="nav-link" data-scroll-target="#explaining-learning">Explaining “Learning”</a>
+  <ul class="collapse">
+  <li><a href="#salary-v-spending-example" id="toc-salary-v-spending-example" class="nav-link" data-scroll-target="#salary-v-spending-example">Salary v Spending Example</a></li>
+  </ul></li>
+  <li><a href="#applying-ml-to-mnist-dataset" id="toc-applying-ml-to-mnist-dataset" class="nav-link" data-scroll-target="#applying-ml-to-mnist-dataset">Applying ML to MNIST Dataset</a></li>
+  <li><a href="#a-detour-into-binary-classification" id="toc-a-detour-into-binary-classification" class="nav-link" data-scroll-target="#a-detour-into-binary-classification">A Detour into Binary Classification</a>
+  <ul class="collapse">
+  <li><a href="#stochastic-gradient-descent" id="toc-stochastic-gradient-descent" class="nav-link" data-scroll-target="#stochastic-gradient-descent">Stochastic Gradient Descent</a></li>
+  </ul></li>
+  <li><a href="#returning-to-full-multi-class-classification" id="toc-returning-to-full-multi-class-classification" class="nav-link" data-scroll-target="#returning-to-full-multi-class-classification">Returning to Full Multi-Class Classification</a>
+  <ul class="collapse">
+  <li><a href="#binary-vs.-multi-class-classification-differences" id="toc-binary-vs.-multi-class-classification-differences" class="nav-link" data-scroll-target="#binary-vs.-multi-class-classification-differences">Binary vs.&nbsp;Multi-Class Classification Differences</a></li>
+  <li><a href="#a-new-loss-calculation" id="toc-a-new-loss-calculation" class="nav-link" data-scroll-target="#a-new-loss-calculation">A New Loss Calculation</a></li>
+  </ul></li>
+  <li><a href="#final-code-for-multi-class-mnist-low-level-training-loop" id="toc-final-code-for-multi-class-mnist-low-level-training-loop" class="nav-link" data-scroll-target="#final-code-for-multi-class-mnist-low-level-training-loop">Final Code for Multi-Class MNIST Low-Level Training Loop</a></li>
+  <li><a href="#a-pivot-point" id="toc-a-pivot-point" class="nav-link" data-scroll-target="#a-pivot-point">A Pivot Point</a></li>
+  <li><a href="#optimizing-the-code" id="toc-optimizing-the-code" class="nav-link" data-scroll-target="#optimizing-the-code">Optimizing the Code</a></li>
+  <li><a href="#deep-learning-models" id="toc-deep-learning-models" class="nav-link" data-scroll-target="#deep-learning-models">Deep Learning Models</a></li>
+  <li><a href="#conclusion" id="toc-conclusion" class="nav-link" data-scroll-target="#conclusion">Conclusion</a></li>
+  </ul></li>
+  </ul>
+</nav>
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">Classifying MNIST Digits (part 2)</h1>
+  <div class="quarto-categories">
+    <div class="quarto-category">machine learning</div>
+    <div class="quarto-category">tutorial</div>
+    <div class="quarto-category">fastai</div>
+    <div class="quarto-category">MNIST</div>
+  </div>
+  </div>
+
+
+
+<div class="quarto-title-meta">
+
+    <div>
+    <div class="quarto-title-meta-heading">Author</div>
+    <div class="quarto-title-meta-contents">
+             <p>Aaron James </p>
+          </div>
+  </div>
+    
+    <div>
+    <div class="quarto-title-meta-heading">Published</div>
+    <div class="quarto-title-meta-contents">
+      <p class="date">April 14, 2025</p>
+    </div>
+  </div>
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<section id="training-a-digit-classification-model-using-mnist-dataset-part-2" class="level1">
+<h1>Training a Digit Classification Model using MNIST Dataset (part 2)</h1>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="Learning_Robot.png" class="img-fluid figure-img"></p>
+<figcaption>Learning_Robot.png</figcaption>
+</figure>
+</div>
+<p>In <a href="../../posts/2025_04_14_MNIST_p1">part 1</a>, we created a baseline for MNIST classification without using any ML/DL tools. The best we got was an <strong>accuracy of 81.73%</strong>; that’s our target to beat with some new models!</p>
+<p>Now we can move onto actually doing ML and DL. We’ll get into the difference shortly. First we just want to a quick code reproduction of part 1 so that we can use the output from the code and load it into memory.</p>
+<p>Here’s a demo of my <a href="https://huggingface.co/spaces/AaronJames95/MNIST_Digit_Classifier">completed model</a>.</p>
+<div id="b2c23d71-ed96-4a6d-a561-675bac5e5830" class="cell" data-execution_count="2">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co">#hide</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="op">!</span> [ <span class="op">-</span>e <span class="op">/</span>content ] <span class="op">&amp;&amp;</span> pip install <span class="op">-</span>Uqq fastbook</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> fastbook</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>fastbook.setup_book()</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> fastai.vision.<span class="bu">all</span> <span class="im">import</span> <span class="op">*</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> fastbook <span class="im">import</span> <span class="op">*</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>path <span class="op">=</span> untar_data(URLs.MNIST)</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="co"># Go crazy with list comprehensions and make all the datasets we need</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> create_dataset(top_dir):</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>    <span class="co"># takes a top level directory and makes the aforementioned list of 3d tensors for each digit</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>    <span class="co"># grab each of the paths for each digit directory in this folder</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>    mnist_datatype_digit_paths <span class="op">=</span> [p <span class="cf">for</span> p <span class="kw">in</span> top_dir.ls().<span class="bu">sorted</span>()] </span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>    sample_images <span class="op">=</span> []</span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> p <span class="kw">in</span> mnist_datatype_digit_paths:</span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>        <span class="co"># grab the path to each image included for the current digit</span></span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>        training_digit_im_paths <span class="op">=</span> [im_path <span class="cf">for</span> im_path <span class="kw">in</span> p.ls().<span class="bu">sorted</span>()] </span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>        <span class="co"># open the image as tensors for each included image</span></span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a>        training_image_tensors <span class="op">=</span> [tensor(Image.<span class="bu">open</span>(im)) <span class="cf">for</span> im <span class="kw">in</span> training_digit_im_paths] </span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a>        <span class="co"># turn the list of several pixel intensity matrices into a single 3D tensor</span></span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a>        stacked_digit_tensors <span class="op">=</span> torch.stack(training_image_tensors).<span class="bu">float</span>() <span class="op">/</span> <span class="dv">255</span> </span>
+<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a>        sample_images.append(stacked_digit_tensors)</span>
+<span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> sample_images</span>
+<span id="cb1-28"><a href="#cb1-28" aria-hidden="true" tabindex="-1"></a>        </span>
+<span id="cb1-29"><a href="#cb1-29" aria-hidden="true" tabindex="-1"></a>mnist_dataset <span class="op">=</span> {}</span>
+<span id="cb1-30"><a href="#cb1-30" aria-hidden="true" tabindex="-1"></a>mnist_dataset[<span class="st">"training"</span>] <span class="op">=</span> create_dataset((path<span class="op">/</span><span class="st">"training"</span>))</span>
+<span id="cb1-31"><a href="#cb1-31" aria-hidden="true" tabindex="-1"></a>mnist_dataset[<span class="st">"testing"</span>] <span class="op">=</span> create_dataset((path<span class="op">/</span><span class="st">"testing"</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+<section id="machine-learning-vs-deep-learning" class="level2">
+<h2 class="anchored" data-anchor-id="machine-learning-vs-deep-learning">Machine Learning vs Deep Learning</h2>
+<p>We are now going to solve this problem using machine learning. “Machine Learning” is a broad field that is all about a computer “learning” patterns in data, and then using those insights to make predictions or decisions. Typically there is a mathematical model that enables us to learn and apply what we’ve learned. “Deep Learning” is a subset of ML. In DL we use <em>layered</em> models to do the same thing on more complicated data.</p>
+<p>First we’re going to focus on machine learning. Then we’ll change our model to incorporate deep learning techniques.</p>
+</section>
+<section id="explaining-learning" class="level2">
+<h2 class="anchored" data-anchor-id="explaining-learning">Explaining “Learning”</h2>
+<p>How can we actually say that a computer “learns” something? They obviously don’t have brains. <a href="google.com">This notebook</a> created by Jeremy Howard gives a pretty great explanation. But I’ll give my own attempted summary.</p>
+<p>Our goal is to find a way to predict data we don’t have using data we do have. Typically, the data is something like a spreadsheet. Often there is some sort of input and output. We want to determine a way to use math to relate the inputs and the outputs of the data that we <em>do</em> have. If we can get that right on the data we <em>do</em> have, we can be relatively confident we can use it for <em>future predictions</em>.</p>
+<section id="salary-v-spending-example" class="level3">
+<h3 class="anchored" data-anchor-id="salary-v-spending-example">Salary v Spending Example</h3>
+<p>If we were relating salary vs monthly spending, we’d probably expect a fairly linear relationship. We might expect something like:</p>
+<p><span class="math inline">\(\text{monthlySpending} = m\times\text{salary} + b\)</span></p>
+<p>If we had that data for several hundred households, we could probably estimate the values of <span class="math inline">\(m\)</span> and <span class="math inline">\(b\)</span>. If we could do this, then we would say that our computer “learned” something. We could then apply those “learnings”. If we had the income of other people (but not their spending) we could use this model to predict their spending.</p>
+<p>So that’s how we can say that a machine has “learned” something; it has estimated the parameters of a mathematical function that we think approximates the trend of the dataset accurately.</p>
+</section>
+</section>
+<section id="applying-ml-to-mnist-dataset" class="level2">
+<h2 class="anchored" data-anchor-id="applying-ml-to-mnist-dataset">Applying ML to MNIST Dataset</h2>
+<p>My goal here is to create something where I give it an image and it tells me the likelihood that the image is each of the 10 digits. I don’t just want it to work for <em>this</em> dataset, I want it to work for any image.</p>
+<p>Actually applying these concepts in code was pretty hard for me. I didn’t just use the easy high-level fastai provided code (libraries), I had to get into the details and create most of the training loop myself. The first thing I had to do was format the data for this process. To get this to work properly, each image needs to be associated with a label. I also had to reformat the tensors so the computer could process them better.</p>
+<div id="a877560d-f832-4e59-b3e9-5b6560f81301" class="cell" data-execution_count="3">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Set up training and validation datasets</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> test_train_labels_aligned(md, dtype, train_x, train_y):</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    training_digits <span class="op">=</span> <span class="dv">0</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> d <span class="kw">in</span> <span class="bu">range</span>(<span class="bu">len</span>(md[dtype]) <span class="op">-</span> <span class="dv">1</span>):</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>        training_digits <span class="op">+=</span> <span class="bu">len</span>(md[dtype][d])</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>        <span class="cf">assert</span>(train_y[training_digits <span class="op">-</span> <span class="dv">1</span>] <span class="op">==</span> d)</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>        <span class="cf">assert</span>(train_y[training_digits] <span class="op">==</span> d <span class="op">+</span> <span class="dv">1</span>)</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>        </span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>train_x <span class="op">=</span> torch.cat(mnist_dataset[<span class="st">"training"</span>]).view(<span class="op">-</span><span class="dv">1</span>,<span class="dv">28</span><span class="op">*</span><span class="dv">28</span>)</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>train_y <span class="op">=</span> tensor([d <span class="cf">for</span> d, items <span class="kw">in</span> <span class="bu">enumerate</span>(mnist_dataset[<span class="st">"training"</span>]) <span class="cf">for</span> _ <span class="kw">in</span> items]).unsqueeze(<span class="dv">1</span>)</span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a><span class="co"># test that the labels lign up correctly</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>test_train_labels_aligned(mnist_dataset, <span class="st">"training"</span>, train_x, train_y)</span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>valid_x <span class="op">=</span> torch.cat(mnist_dataset[<span class="st">"testing"</span>]).view(<span class="op">-</span><span class="dv">1</span>,<span class="dv">28</span><span class="op">*</span><span class="dv">28</span>)</span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>valid_y <span class="op">=</span> tensor([d <span class="cf">for</span> d, items <span class="kw">in</span> <span class="bu">enumerate</span>(mnist_dataset[<span class="st">"testing"</span>]) <span class="cf">for</span> _ <span class="kw">in</span> items]).unsqueeze(<span class="dv">1</span>)</span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>test_train_labels_aligned(mnist_dataset, <span class="st">"testing"</span>, valid_x, valid_y)</span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a><span class="co"># Zip x and y together for each datatype</span></span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a>dset_training <span class="op">=</span> <span class="bu">list</span>(<span class="bu">zip</span>(train_x, train_y))</span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a>dset_validation <span class="op">=</span> <span class="bu">list</span>(<span class="bu">zip</span>(valid_x, valid_y))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+<p>This was pretty straightforward, but then I really struggled with how to do ML for 10 digits:</p>
+<p>“Ugh this is hard. I pretty much just thought for like a few hours straight and overnight. Turning this problem into a spreadsheet was my first step and I should include it here…”</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="MNIST_sheet.png" class="img-fluid figure-img"></p>
+<figcaption>“Sketch Spreadsheet”</figcaption>
+</figure>
+</div>
+<p>Thought Process Continued:</p>
+<blockquote class="blockquote">
+<p>“I think its like, you basically want a model with 10 sets of weights and biases that each do binary prediction that a photo is a digit. So you probably have to train 10 models? How to turn this into a training loop though. But what if the (hold on, eureka incoming) what if the parameters w and b are mega tensors? So 3D tensors that have an axis that contains all the digit data predictions together? Because the thing that’s hard is the output should NOT be a number between 0 and 9. That would imply that a 2.5 would be an image that is most similar to 2 and 5, but 2 and 5 are not similar looking digits. So we have to do multi-factor classification. I’m sure there is some official way to do this but I want to try doing it myself first.”</p>
+</blockquote>
+</section>
+<section id="a-detour-into-binary-classification" class="level2">
+<h2 class="anchored" data-anchor-id="a-detour-into-binary-classification">A Detour into Binary Classification</h2>
+<p>It was so hard I took a step back. I needed to refresh my memory on how to do all this. I ended up rewriting a binary classification training loop for the digit 0. This model should be able to determine if any image is a zero or not a zero.</p>
+<section id="stochastic-gradient-descent" class="level3">
+<h3 class="anchored" data-anchor-id="stochastic-gradient-descent">Stochastic Gradient Descent</h3>
+<p>More fancy words to make simple things sound complicated. We talked earlier about the fact that “learning” means estimating the parameters of a model (math equation, function) that fits our dataset. How do we use a computer to estimate the parameters of a function? We use Stochastic Gradient Descent (SGD). The <a href="https://www.kaggle.com/code/jhoward/how-does-a-neural-net-really-work">linked notebook</a> goes into really good depth on what exactly this is. Before we start applying this step, we really need to decide on a model. We use a linear model in this notebook for our machine learning example because its one of the simplest models there is.</p>
+<section id="steps-for-sgd" class="level4">
+<h4 class="anchored" data-anchor-id="steps-for-sgd">Steps for SGD</h4>
+<ol start="0" type="1">
+<li><strong>Decide on a model</strong>: We have chosen the linear model <span class="math inline">\(y = mx + b\)</span></li>
+<li><strong>Initialize parameters</strong>: We come up with some random guesses for our parameters <span class="math inline">\(m\)</span> and <span class="math inline">\(b\)</span>.</li>
+<li><strong>Predict</strong>: We use our data and our initial parameters to make a prediction. The first time we do this we will always have a very poor prediction.</li>
+<li><strong>Calculate the loss</strong>: We haven’t really talked about loss yet. We brushed on it in the last post. Basically, we need a numerical way of determining <em>how</em> wrong we are. We compared L1 norm and L2 norm (RMSE) in the last post, and it turned out that RMSE worked better for our dataset and current use case. Keep in mind that this is now <em>another</em> equation. Our model is about predicting the data, and our loss is about estimating the accuracy of our data. Two different equations.</li>
+<li><strong>Calculate the Gradient</strong>. And here’s the hardest math part. Again here’s <a href="https://www.kaggle.com/code/jhoward/how-does-a-neural-net-really-work">Jeremy’s SGD Post</a>. <em>Very basically</em>, we use calculus to determine how much each parameter needs to change so that when we make our next prediction, our loss is smaller. We can use these numerical methods so we <em>don’t</em> have to make a random guess for our next estimate, it will be a very precise estimate based on the principles of multi-variate calculus.</li>
+<li><strong>Step the parameters</strong>: We now adjust the parameters based on the gradient. We nudge them in the direction of a smaller loss that our previous gradients predicted.</li>
+<li><strong>Repeat the process with Step 2</strong>. The two magic parts of this are the gradient, and the various iterations. If we can keep nudging out parameters in the right direction (with the gradient), and do it iteratively (step 6) eventually our loss will get closer and closer to zero. This is good. If loss is the difference between the prediction and the right answer, it will be very helpful if that distance is minimized</li>
+<li><strong>Stop</strong>. We can’t just iterate forever. We will likely have some imposed criteria that we will hit that will tell us we can stop. For example, we could iterate until we beat our baseline that we got in the last post. However we define it, we will have to stop at some point to be able to apply the learnings of our model</li>
+</ol>
+<p>Then I go into the code for making this all work. This first chunk for the binary 0 classifier is bad code. I’m including it because its “functional” and because it documents my thought process. I wrote it mostly from memory using the steps of SGD.</p>
+<div id="1c5023d1-5eda-4c5e-a625-cc812639e3b8" class="cell" data-execution_count="4">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> create_0_binary_class_dset():</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    <span class="co"># We modify the dset creation above</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    train_x_0 <span class="op">=</span> torch.cat(mnist_dataset[<span class="st">"training"</span>]).view(<span class="op">-</span><span class="dv">1</span>,<span class="dv">28</span><span class="op">*</span><span class="dv">28</span>)</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    training_0s <span class="op">=</span> <span class="bu">len</span>(mnist_dataset[<span class="st">"training"</span>][<span class="dv">0</span>])</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    train_y_0 <span class="op">=</span> tensor([<span class="dv">1</span>]<span class="op">*</span>training_0s <span class="op">+</span> [<span class="dv">0</span>]<span class="op">*</span>(<span class="bu">len</span>(train_y)<span class="op">-</span>training_0s)).unsqueeze(<span class="dv">1</span>)</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>    valid_x_0 <span class="op">=</span> torch.cat(mnist_dataset[<span class="st">"testing"</span>]).view(<span class="op">-</span><span class="dv">1</span>,<span class="dv">28</span><span class="op">*</span><span class="dv">28</span>)</span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>    testing_0s <span class="op">=</span> <span class="bu">len</span>(mnist_dataset[<span class="st">"testing"</span>][<span class="dv">0</span>])</span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>    valid_y_0 <span class="op">=</span> tensor([<span class="dv">1</span>]<span class="op">*</span>testing_0s <span class="op">+</span> [<span class="dv">0</span>]<span class="op">*</span>(<span class="bu">len</span>(valid_y)<span class="op">-</span>testing_0s)).unsqueeze(<span class="dv">1</span>)</span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>    dset_train_0 <span class="op">=</span> <span class="bu">list</span>(<span class="bu">zip</span>(train_x_0, train_y_0))</span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>    dset_valid_0 <span class="op">=</span> <span class="bu">list</span>(<span class="bu">zip</span>(valid_x_0, valid_y_0))</span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> dset_train_0, dset_valid_0</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+<div id="f29ac276-c628-4ae8-8751-d13db8084c14" class="cell" data-execution_count="5">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> init_params(shape, std <span class="op">=</span> <span class="fl">1.0</span>): <span class="cf">return</span> (torch.randn(shape)<span class="op">*</span>std).requires_grad_()</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> model_linear(xb, weights, bias): <span class="cf">return</span> xb<span class="op">@</span>weights <span class="op">+</span> bias</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> loss_0_bin(preds, y_labels):</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>    preds <span class="op">=</span> preds.sigmoid()</span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> torch.where(y_labels <span class="op">==</span> <span class="dv">1</span>, <span class="dv">1</span> <span class="op">-</span> preds, preds).mean()</span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> batch_acc(xb_preds, yb):</span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>    preds <span class="op">=</span> xb_preds.sigmoid()</span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>    correct_preds <span class="op">=</span> (preds <span class="op">&gt;</span> <span class="fl">0.5</span>) <span class="op">==</span> yb</span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> correct_preds.<span class="bu">float</span>().mean()</span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> main():</span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Turn the dataset into randomized dataloaders</span></span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a>    dset_train, dset_valid <span class="op">=</span> create_0_binary_class_dset()</span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a>    dl_train <span class="op">=</span> DataLoader(dset_train, batch_size<span class="op">=</span><span class="dv">256</span>, shuffle<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a>    dl_valid <span class="op">=</span> DataLoader(dset_valid, batch_size<span class="op">=</span><span class="dv">256</span>, shuffle<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-20"><a href="#cb4-20" aria-hidden="true" tabindex="-1"></a>    <span class="co">#1. Initialize parameters</span></span>
+<span id="cb4-21"><a href="#cb4-21" aria-hidden="true" tabindex="-1"></a>    weights <span class="op">=</span> init_params((<span class="dv">28</span><span class="op">*</span><span class="dv">28</span>,<span class="dv">1</span>))</span>
+<span id="cb4-22"><a href="#cb4-22" aria-hidden="true" tabindex="-1"></a>    bias <span class="op">=</span> init_params(<span class="dv">1</span>)</span>
+<span id="cb4-23"><a href="#cb4-23" aria-hidden="true" tabindex="-1"></a>    lr <span class="op">=</span> <span class="fl">.75</span></span>
+<span id="cb4-24"><a href="#cb4-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-25"><a href="#cb4-25" aria-hidden="true" tabindex="-1"></a>    epochs <span class="op">=</span> <span class="dv">10</span></span>
+<span id="cb4-26"><a href="#cb4-26" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> _ <span class="kw">in</span> <span class="bu">range</span>(epochs):</span>
+<span id="cb4-27"><a href="#cb4-27" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span> xb, yb <span class="kw">in</span> dl_train:</span>
+<span id="cb4-28"><a href="#cb4-28" aria-hidden="true" tabindex="-1"></a>            <span class="co"># 2. Make a prediction</span></span>
+<span id="cb4-29"><a href="#cb4-29" aria-hidden="true" tabindex="-1"></a>            <span class="co"># preds will be a vector with an output for each image in the batch. so 256x1</span></span>
+<span id="cb4-30"><a href="#cb4-30" aria-hidden="true" tabindex="-1"></a>            <span class="co">#print(xb.shape)</span></span>
+<span id="cb4-31"><a href="#cb4-31" aria-hidden="true" tabindex="-1"></a>            preds <span class="op">=</span> model_linear(xb, weights, bias)</span>
+<span id="cb4-32"><a href="#cb4-32" aria-hidden="true" tabindex="-1"></a>            <span class="co"># 3. Calculate Loss</span></span>
+<span id="cb4-33"><a href="#cb4-33" aria-hidden="true" tabindex="-1"></a>            loss <span class="op">=</span> loss_0_bin(preds, yb)</span>
+<span id="cb4-34"><a href="#cb4-34" aria-hidden="true" tabindex="-1"></a>            <span class="co"># 4. Get gradients</span></span>
+<span id="cb4-35"><a href="#cb4-35" aria-hidden="true" tabindex="-1"></a>            loss.backward()</span>
+<span id="cb4-36"><a href="#cb4-36" aria-hidden="true" tabindex="-1"></a>            weights.data <span class="op">-=</span> weights.grad<span class="op">*</span>lr</span>
+<span id="cb4-37"><a href="#cb4-37" aria-hidden="true" tabindex="-1"></a>            weights.grad.zero_()</span>
+<span id="cb4-38"><a href="#cb4-38" aria-hidden="true" tabindex="-1"></a>            bias.data <span class="op">-=</span> bias.grad<span class="op">*</span>lr</span>
+<span id="cb4-39"><a href="#cb4-39" aria-hidden="true" tabindex="-1"></a>            bias.grad.zero_()</span>
+<span id="cb4-40"><a href="#cb4-40" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Now, because the params w/b have been modified slightly by each batch, we can determine how good they are now.</span></span>
+<span id="cb4-41"><a href="#cb4-41" aria-hidden="true" tabindex="-1"></a>        accs <span class="op">=</span> [batch_acc(model_linear(xb, weights, bias), yb) <span class="cf">for</span> xb, yb <span class="kw">in</span> dl_valid]</span>
+<span id="cb4-42"><a href="#cb4-42" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(<span class="st">"accuracy"</span>,torch.stack(accs).mean())</span>
+<span id="cb4-43"><a href="#cb4-43" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-44"><a href="#cb4-44" aria-hidden="true" tabindex="-1"></a>main()</span>
+<span id="cb4-45"><a href="#cb4-45" aria-hidden="true" tabindex="-1"></a></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output cell-output-stdout">
+<pre><code>accuracy tensor(0.9007)
+accuracy tensor(0.8996)
+accuracy tensor(0.9012)
+accuracy tensor(0.9041)
+accuracy tensor(0.9012)
+accuracy tensor(0.8998)
+accuracy tensor(0.9013)
+accuracy tensor(0.9013)
+accuracy tensor(0.9028)
+accuracy tensor(0.9043)</code></pre>
+</div>
+</div>
+<p>Something I also had to add was determining the accuracy of each epoch (or training iteration). We want to be able to have some sense of if what we’re doing is working. I train the model on the <em>training data</em>, then I test of accuracy with the <em>validation data</em> which is what we did in the last post.</p>
+<p>Interestingly enough, after only one epoch we get accuracy of ~90%. Keep in mind this is still just binary classification, but it goes to show how quickly we can get acccurately tuned parameters.</p>
+</section>
+</section>
+</section>
+<section id="returning-to-full-multi-class-classification" class="level2">
+<h2 class="anchored" data-anchor-id="returning-to-full-multi-class-classification">Returning to Full Multi-Class Classification</h2>
+<p>Ok, I’m glad I took that detour. Now I can just slightly modify what I did to apply it to a multi class. I think it makes sense to go through the changes first before I show off what I built.</p>
+<section id="binary-vs.-multi-class-classification-differences" class="level3">
+<h3 class="anchored" data-anchor-id="binary-vs.-multi-class-classification-differences">Binary vs.&nbsp;Multi-Class Classification Differences</h3>
+<p>The first thing I did was make my code a bit more readable by breaking it into functions. Actually, I pretty much just used the ones from the fastai lesson.</p>
+<p>There were really only 3 main pieces that had to change:</p>
+<ol type="1">
+<li><strong>Initializing the parameters</strong>: For binary classification, each image only needs one output which is essentially true/false to the question, “is this image a zero?”. For multi-class, each image needs 10 different scores. We do this by changing our <code>weights</code> and <code>biases</code> initialization. They change from <code>weights, bias = init_params((28*28,1)), init_params(1)</code> to <code>weights, bias = init_params((28*28,10)), init_params(10)</code>. A note: all I had to do was add TWO ZEROES but this took me forever to figure out…</li>
+<li><strong>Loss Function</strong>: This was really tricky too. I’ll get into it shortly.</li>
+<li><strong>Accuracy Function</strong>: We just had to see if the prediction lined up with the actual correct answer. I did it by finding the index of the 1x10 vector that was highest. Since I set my data up this way, we know that that index corresponds <em>exactly</em> to the labels we had in our “correct answers” data (y_label or targets). If I was classifying dog breeds, I’d have to come up with a different way of doing this, likely using a map that maps indices to the corresponding breed. It’s very convenient that index corresponds perfectly with the label.</li>
+</ol>
+</section>
+<section id="a-new-loss-calculation" class="level3">
+<h3 class="anchored" data-anchor-id="a-new-loss-calculation">A New Loss Calculation</h3>
+<p>Ok so I realized that we needed another one. My plan was to determine which digit that the parameters predicted the image was, compare it to the correct target labels, and then get the average number of misses per batch as my loss function. Two issues with this. First was implementation. If I use argmax on the prediction variable, I lose gradient tracking of my parameters w and b. So our whole stochastic gradient descent method falls apart. Second was conceptual. If this did work somehow, I’m not being optimal. My model would treat these two classifications of a 6 the same:</p>
+<ul>
+<li>High Confidence 6: <code>[0.01, 0.01, 0.02, 0.02, 0.01, 0.01, 0.90, 0.01, 0.01, 0.01]</code></li>
+<li>Low Confidence 6: <code>[0.09, 0.10, 0.08, 0.10, 0.10, 0.08, 0.13, 0.09, 0.11, 0.12]</code></li>
+</ul>
+<p>Both of these prediction outputs predict a 6 because the seventh value is highest. However, the first output predicts it more optimally because it is significantly more confident that it is a 6 than any other digit.</p>
+<p>Our loss function is really important. It’s our way of telling the model EXACTLY what we want it to do using math. We don’t just want our model to get the right classification, we want it to get the right classification <em>and be extremely confident about it</em>.</p>
+<p>I just wanted to understand the math behind this better. Apparently the right way to do this problem is to use <code>log_softmax()</code>, where softmax is:</p>
+<p><span class="math inline">\(\text{softmax}(r) = \frac{e^{r_i}}{\sum_{j} r_j}\)</span></p>
+<div id="ee438a0d-545d-43b4-9b51-e645be6db56a" class="cell" data-execution_count="6">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="co"># I just need to convince myself I understand the math of this new loss function...</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>r <span class="op">=</span> tensor([<span class="fl">2.0</span>, <span class="fl">1.0</span>, <span class="fl">0.1</span>])</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>exp_r<span class="op">=</span> torch.exp(r)</span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>norm_exp_r <span class="op">=</span> exp_r<span class="op">/</span>exp_r.<span class="bu">sum</span>()</span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span>(torch.allclose(norm_exp_r, F.softmax(r, dim<span class="op">=</span><span class="dv">0</span>), atol<span class="op">=</span><span class="fl">1e-4</span>))</span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>log_norm_exp_r <span class="op">=</span> torch.log(norm_exp_r)</span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span>(torch.allclose(log_norm_exp_r, r.log_softmax(dim<span class="op">=</span><span class="dv">0</span>), atol<span class="op">=</span><span class="fl">1e-4</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+<p>Softmax makes it so that the sum of the predictions vector is 1, which is essentially turning it into a vector of percentages that the current image is each of the 10 digits.</p>
+<p>Here’s how our loss function modifies the input to make it better and better:</p>
+<ul>
+<li>Raw Predictions: The index that contains the highest value is our predicted digit, no correlation to other values.</li>
+<li>Softmax: Probabilities that image could be the digit at each index. Sum is 1, so these are relative to the other values in the vector. For example, if the first number is .75 and the second is .25, then the others have to all be 0, even if they were non zero at the last stage. Relativizing the prediction allows us to get more information from a single number.</li>
+<li>Log Softmax: This emphasizes penalty when the prediction is confidently incorrect, and still gives a small penalty when it gets the correct prediction not confidently. It’s the distribution of the -log function. It’s really similar to the way that we used RMSE to mega-penalize certain mistakes in part 1. It’s kind of like partial credit in math class. Oh, you were supposed to say this image was a 7? Were you:
+<ul>
+<li>Right and confident? p=0.9: You don’t lose any points</li>
+<li>Right, but not sure? p=0.5: You lose a few point</li>
+<li>Confidently incorrect? p=0.1: You lose lots of points</li>
+</ul></li>
+</ul>
+<div id="0910a5d6-afff-4411-ac09-426b37e3caec" class="cell" data-execution_count="7">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Why do we take log of soft_max? Check index 6 (or the seventh digit) of the output</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>high_conf <span class="op">=</span> tensor([<span class="fl">0.01</span>, <span class="fl">0.01</span>, <span class="fl">0.02</span>, <span class="fl">0.02</span>, <span class="fl">0.01</span>, <span class="fl">0.01</span>, <span class="fl">0.90</span>, <span class="fl">0.01</span>, <span class="fl">0.01</span>, <span class="fl">0.01</span>])</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>low_conf <span class="op">=</span> tensor([<span class="fl">0.09</span>, <span class="fl">0.10</span>, <span class="fl">0.08</span>, <span class="fl">0.10</span>, <span class="fl">0.10</span>, <span class="fl">0.08</span>, <span class="fl">0.13</span>, <span class="fl">0.09</span>, <span class="fl">0.11</span>, <span class="fl">0.12</span>])</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>F.softmax(high_conf, dim<span class="op">=</span><span class="dv">0</span>), F.softmax(low_conf, dim<span class="op">=</span><span class="dv">0</span>), <span class="op">-</span>high_conf.log_softmax(dim<span class="op">=</span><span class="dv">0</span>), <span class="op">-</span>low_conf.log_softmax(dim<span class="op">=</span><span class="dv">0</span>),   </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output cell-output-display" data-execution_count="7">
+<pre><code>(tensor([0.0873, 0.0873, 0.0882, 0.0882, 0.0873, 0.0873, 0.2126, 0.0873, 0.0873, 0.0873]),
+ tensor([0.0990, 0.1000, 0.0980, 0.1000, 0.1000, 0.0980, 0.1030, 0.0990, 0.1010, 0.1020]),
+ tensor([2.4384, 2.4384, 2.4284, 2.4284, 2.4384, 2.4384, 1.5484, 2.4384, 2.4384, 2.4384]),
+ tensor([2.3127, 2.3027, 2.3227, 2.3027, 2.3027, 2.3227, 2.2727, 2.3127, 2.2927, 2.2827]))</code></pre>
+</div>
+</div>
+<p>The seventh prediction (corresponding to digit 6 since the first prediction is for 0) is what to focus on. With <code>log_softmax()</code> there is a much greater difference for the low confidence and high confidence predictions. This means that we have packed lots of information into a single digit, which is great for our model and highly optimal.</p>
+</section>
+</section>
+<section id="final-code-for-multi-class-mnist-low-level-training-loop" class="level2">
+<h2 class="anchored" data-anchor-id="final-code-for-multi-class-mnist-low-level-training-loop">Final Code for Multi-Class MNIST Low-Level Training Loop</h2>
+<div id="70fb2d9c-2f37-4961-854f-433302803249" class="cell" data-execution_count="8">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Basically we want the shape of logits that we had in the golden mean baseline, so our parameters have to mirror that shape</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="co"># Declare global params variable. I know there's a better OOP way to do this, but it's chill...</span></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Turn the dataset into randomized dataloaders</span></span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>dl_train <span class="op">=</span> DataLoader(dset_training, batch_size<span class="op">=</span><span class="dv">256</span>, shuffle<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>dl_valid <span class="op">=</span> DataLoader(dset_validation, batch_size<span class="op">=</span><span class="dv">256</span>, shuffle<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a><span class="co">#1. Initialize parameters</span></span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a>lr <span class="op">=</span> <span class="fl">.25</span></span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a>epochs <span class="op">=</span> <span class="dv">20</span></span>
+<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a>weights <span class="op">=</span> init_params((<span class="dv">28</span><span class="op">*</span><span class="dv">28</span>,<span class="dv">10</span>))</span>
+<span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a>bias <span class="op">=</span> init_params(<span class="dv">10</span>)</span>
+<span id="cb9-13"><a href="#cb9-13" aria-hidden="true" tabindex="-1"></a>params <span class="op">=</span> weights,bias</span>
+<span id="cb9-14"><a href="#cb9-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-15"><a href="#cb9-15" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> main_multi_class():</span>
+<span id="cb9-16"><a href="#cb9-16" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(validate_epoch(linear_1))</span>
+<span id="cb9-17"><a href="#cb9-17" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> _ <span class="kw">in</span> <span class="bu">range</span>(epochs):</span>
+<span id="cb9-18"><a href="#cb9-18" aria-hidden="true" tabindex="-1"></a>        train_epoch(linear_1, lr, dl_train)</span>
+<span id="cb9-19"><a href="#cb9-19" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(validate_epoch(linear_1))</span>
+<span id="cb9-20"><a href="#cb9-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-21"><a href="#cb9-21" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> init_params(shape, std <span class="op">=</span> <span class="fl">1.0</span>): <span class="cf">return</span> (torch.randn(shape)<span class="op">*</span>std).requires_grad_()</span>
+<span id="cb9-22"><a href="#cb9-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-23"><a href="#cb9-23" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> linear_1(xb): </span>
+<span id="cb9-24"><a href="#cb9-24" aria-hidden="true" tabindex="-1"></a>    w, b <span class="op">=</span> params</span>
+<span id="cb9-25"><a href="#cb9-25" aria-hidden="true" tabindex="-1"></a>    <span class="co">#print("model", w, b)</span></span>
+<span id="cb9-26"><a href="#cb9-26" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> xb<span class="op">@</span>w <span class="op">+</span> b</span>
+<span id="cb9-27"><a href="#cb9-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-28"><a href="#cb9-28" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> mnist_loss(preds, yb):</span>
+<span id="cb9-29"><a href="#cb9-29" aria-hidden="true" tabindex="-1"></a>    <span class="co">#print(preds.shape, yb.shape)</span></span>
+<span id="cb9-30"><a href="#cb9-30" aria-hidden="true" tabindex="-1"></a>    yb <span class="op">=</span> yb.squeeze()</span>
+<span id="cb9-31"><a href="#cb9-31" aria-hidden="true" tabindex="-1"></a>    log_sm_probs <span class="op">=</span> preds.log_softmax(dim<span class="op">=</span><span class="dv">1</span>)</span>
+<span id="cb9-32"><a href="#cb9-32" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="op">-</span>log_sm_probs[<span class="bu">range</span>(<span class="bu">len</span>(yb)), yb].mean()</span>
+<span id="cb9-33"><a href="#cb9-33" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb9-34"><a href="#cb9-34" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> train_epoch(model, lr, dl):</span>
+<span id="cb9-35"><a href="#cb9-35" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> xb,yb <span class="kw">in</span> dl:</span>
+<span id="cb9-36"><a href="#cb9-36" aria-hidden="true" tabindex="-1"></a>        calc_grad(xb, yb, model)</span>
+<span id="cb9-37"><a href="#cb9-37" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span> p <span class="kw">in</span> params:</span>
+<span id="cb9-38"><a href="#cb9-38" aria-hidden="true" tabindex="-1"></a>            p.data <span class="op">-=</span> p.grad<span class="op">*</span>lr</span>
+<span id="cb9-39"><a href="#cb9-39" aria-hidden="true" tabindex="-1"></a>            p.grad.zero_()</span>
+<span id="cb9-40"><a href="#cb9-40" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-41"><a href="#cb9-41" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> calc_grad(xb, yb, model):</span>
+<span id="cb9-42"><a href="#cb9-42" aria-hidden="true" tabindex="-1"></a>    preds <span class="op">=</span> model(xb)</span>
+<span id="cb9-43"><a href="#cb9-43" aria-hidden="true" tabindex="-1"></a>    loss <span class="op">=</span> mnist_loss(preds, yb)</span>
+<span id="cb9-44"><a href="#cb9-44" aria-hidden="true" tabindex="-1"></a>    <span class="co">#print(loss.shape)</span></span>
+<span id="cb9-45"><a href="#cb9-45" aria-hidden="true" tabindex="-1"></a>    loss.backward()</span>
+<span id="cb9-46"><a href="#cb9-46" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-47"><a href="#cb9-47" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> validate_epoch(model):</span>
+<span id="cb9-48"><a href="#cb9-48" aria-hidden="true" tabindex="-1"></a>    accs <span class="op">=</span> [batch_accuracy(model(xb), yb) <span class="cf">for</span> xb,yb <span class="kw">in</span> dl_valid]</span>
+<span id="cb9-49"><a href="#cb9-49" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="bu">round</span>(torch.stack(accs).mean().item(), <span class="dv">4</span>)</span>
+<span id="cb9-50"><a href="#cb9-50" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-51"><a href="#cb9-51" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> batch_accuracy(preds, yb):</span>
+<span id="cb9-52"><a href="#cb9-52" aria-hidden="true" tabindex="-1"></a>    max_indices <span class="op">=</span> preds.argmax(dim<span class="op">=</span><span class="dv">1</span>).unsqueeze(<span class="dv">1</span>)</span>
+<span id="cb9-53"><a href="#cb9-53" aria-hidden="true" tabindex="-1"></a>    <span class="co">#print("args", max_indices)</span></span>
+<span id="cb9-54"><a href="#cb9-54" aria-hidden="true" tabindex="-1"></a>    correct <span class="op">=</span> (max_indices <span class="op">==</span> yb)</span>
+<span id="cb9-55"><a href="#cb9-55" aria-hidden="true" tabindex="-1"></a>    acc <span class="op">=</span> correct.<span class="bu">float</span>().mean()</span>
+<span id="cb9-56"><a href="#cb9-56" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> acc</span>
+<span id="cb9-57"><a href="#cb9-57" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-58"><a href="#cb9-58" aria-hidden="true" tabindex="-1"></a>main_multi_class()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output cell-output-stdout">
+<pre><code>0.0965
+0.7646
+0.8165
+0.8429
+0.8542
+0.8629
+0.8701
+0.8687
+0.8738
+0.8785
+0.8822
+0.8799
+0.8878
+0.8855
+0.8871
+0.8911
+0.8893
+0.8934
+0.8907
+0.8931
+0.8936</code></pre>
+</div>
+</div>
+</section>
+<section id="a-pivot-point" class="level2">
+<h2 class="anchored" data-anchor-id="a-pivot-point">A Pivot Point</h2>
+<p>So, amazingly we have just “succeeded”! We have built a machine learning model that is able to classify digits in the MNIST dataset, and that outperforms our baseline classification of 81.73%! There’s a few more things to consider but this is definitely a moment to celebrate and enjoy. We’ve used what we have been learning to outperform our benchmark. Good job.</p>
+<p>We will now slightly optimize the code, and then we’ll look at some deep learning models. Remember, the linear model is just an example of machine learning, and we’re interested in comparing the performance of both.</p>
+</section>
+<section id="optimizing-the-code" class="level2">
+<h2 class="anchored" data-anchor-id="optimizing-the-code">Optimizing the Code</h2>
+<p>Ok, so what we did was the custom version of this. We now want to take steps to create the fastai/pyTorch extraction.</p>
+<p>Everything we have just completed actually works. However, we have just been looking under the hood. These details matter for my comprehension of the math and coding, but for actual training I would never create a custom training loop. This training loop is the main engine that drives most ML systems and we just built it from scratch. Think about a car engine. There’s no way I will ever need to build a car engine from scratch. If I’m building my own car, I might buy an engine, and knowledge of how it works will help me choose which to buy for the car I want to build. Most people will just end up buying the whole car and be blissfully unaware of the fact that it comes with a functioning engine.</p>
+<p>In this analogy, fastai is the engine factory. So we will shape our custom engine into something closer to what gets produced in the factory. One thing to consider is that the pytorch library provides several models as a part of its packaging like <code>nn.Linear</code>. Instead of writing our own version of this, we want to use the one that is already provided. We also need an “optimizer”, so that we mirror the factory more accurately.</p>
+<div id="a9e75499-4e7a-43ef-a751-cde87b58de82" class="cell" data-execution_count="9">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>linear_model <span class="op">=</span> nn.Linear(<span class="dv">28</span><span class="op">*</span><span class="dv">28</span>,<span class="dv">10</span>)</span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> BasicOptim:</span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__init__</span>(<span class="va">self</span>,params,lr): <span class="va">self</span>.params,<span class="va">self</span>.lr <span class="op">=</span> <span class="bu">list</span>(params),lr</span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> step(<span class="va">self</span>, <span class="op">*</span>args, <span class="op">**</span>kwargs):</span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span> p <span class="kw">in</span> <span class="va">self</span>.params: p.data <span class="op">-=</span> p.grad.data <span class="op">*</span> <span class="va">self</span>.lr</span>
+<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> zero_grad(<span class="va">self</span>, <span class="op">*</span>args, <span class="op">**</span>kwargs):</span>
+<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span> p <span class="kw">in</span> <span class="va">self</span>.params: p.grad <span class="op">=</span> <span class="va">None</span></span>
+<span id="cb11-11"><a href="#cb11-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-12"><a href="#cb11-12" aria-hidden="true" tabindex="-1"></a>opt <span class="op">=</span> BasicOptim(linear_model.parameters(), lr)</span>
+<span id="cb11-13"><a href="#cb11-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-14"><a href="#cb11-14" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> train_epoch(model):</span>
+<span id="cb11-15"><a href="#cb11-15" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> xb,yb <span class="kw">in</span> dl_train:</span>
+<span id="cb11-16"><a href="#cb11-16" aria-hidden="true" tabindex="-1"></a>        <span class="co">#print(xb.dtype, yb.dtype)</span></span>
+<span id="cb11-17"><a href="#cb11-17" aria-hidden="true" tabindex="-1"></a>        calc_grad(xb, yb, model)</span>
+<span id="cb11-18"><a href="#cb11-18" aria-hidden="true" tabindex="-1"></a>        opt.step()</span>
+<span id="cb11-19"><a href="#cb11-19" aria-hidden="true" tabindex="-1"></a>        opt.zero_grad()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+<p>Turning the parameters into class variables makes the code stronger. Earlier we had to rely on a global params variable. In our tiny use case this was no problem, but as the codebase grows global variables are a terrible idea.</p>
+<p>Then, we create a new optimizer and redefine our training function. This is the only change we have to make to get the same results as before!</p>
+<div id="545678bc-9546-4fdc-bcd7-0f0408e3e410" class="cell" data-execution_count="10">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb12"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> train_model(model, epochs):</span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(epochs):</span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>        train_epoch(model)</span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(validate_epoch(model), end<span class="op">=</span><span class="st">' '</span>)</span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(validate_epoch(linear_model), end<span class="op">=</span><span class="st">' '</span>)</span>
+<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a>train_model(linear_model, <span class="dv">20</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output cell-output-stdout">
+<pre><code>0.087 0.9045 0.9125 0.9155 0.9151 0.9197 0.9178 0.9211 0.9211 0.9195 0.9223 0.9227 0.9226 0.9207 0.924 0.9214 0.9234 0.9247 0.9256 0.9214 0.9247 </code></pre>
+</div>
+</div>
+<p>Pretty good. We can do the same thing the actual RIGHT way using fastai classes</p>
+<div id="938f88f9-2e1d-460d-a66c-850a8d975a18" class="cell" data-execution_count="11">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>lr <span class="op">=</span> <span class="fl">.5</span></span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>linear_model <span class="op">=</span> nn.Linear(<span class="dv">28</span><span class="op">*</span><span class="dv">28</span>,<span class="dv">10</span>)</span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>opt <span class="op">=</span> SGD(linear_model.parameters(), lr)</span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>train_model(linear_model, <span class="dv">20</span>)</span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a>dls <span class="op">=</span> DataLoaders(dl_train, dl_valid)</span>
+<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-8"><a href="#cb14-8" aria-hidden="true" tabindex="-1"></a>learn <span class="op">=</span> Learner(dls, nn.Linear(<span class="dv">28</span><span class="op">*</span><span class="dv">28</span>,<span class="dv">10</span>), opt_func<span class="op">=</span>SGD,</span>
+<span id="cb14-9"><a href="#cb14-9" aria-hidden="true" tabindex="-1"></a>                loss_func<span class="op">=</span>mnist_loss, metrics<span class="op">=</span>batch_accuracy)</span>
+<span id="cb14-10"><a href="#cb14-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-11"><a href="#cb14-11" aria-hidden="true" tabindex="-1"></a>learn.fit(<span class="dv">10</span>, lr<span class="op">=</span>lr)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output cell-output-stdout">
+<pre><code>0.9095 0.9143 0.9174 0.9186 0.9194 0.9204 0.9245 0.9215 0.9226 0.9232 0.9242 0.9229 0.9244 0.9246 0.9243 0.9237 0.9234 0.9222 0.9218 0.9248 </code></pre>
+</div>
+<div class="cell-output cell-output-display">
+
+<style>
+    /* Turns off some styling */
+    progress {
+        /* gets rid of default border in Firefox and Opera. */
+        border: none;
+        /* Needs to be in here for Safari polyfill so background images work as expected. */
+        background-size: auto;
+    }
+    progress:not([value]), progress:not([value])::-webkit-progress-bar {
+        background: repeating-linear-gradient(45deg, #7e7e7e, #7e7e7e 10px, #5c5c5c 10px, #5c5c5c 20px);
+    }
+    .progress-bar-interrupted, .progress-bar-interrupted::-webkit-progress-bar {
+        background: #F44336;
+    }
+</style>
+</div>
+<div class="cell-output cell-output-display">
+<table class="dataframe caption-top table table-sm table-striped small" data-quarto-postprocess="true" data-border="1">
+<thead>
+<tr class="header">
+<th data-quarto-table-cell-role="th">epoch</th>
+<th data-quarto-table-cell-role="th">train_loss</th>
+<th data-quarto-table-cell-role="th">valid_loss</th>
+<th data-quarto-table-cell-role="th">batch_accuracy</th>
+<th data-quarto-table-cell-role="th">time</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>0</td>
+<td>0.372398</td>
+<td>0.331982</td>
+<td>0.908200</td>
+<td>00:00</td>
+</tr>
+<tr class="even">
+<td>1</td>
+<td>0.316947</td>
+<td>0.303885</td>
+<td>0.916700</td>
+<td>00:00</td>
+</tr>
+<tr class="odd">
+<td>2</td>
+<td>0.302206</td>
+<td>0.293496</td>
+<td>0.918900</td>
+<td>00:00</td>
+</tr>
+<tr class="even">
+<td>3</td>
+<td>0.294819</td>
+<td>0.288783</td>
+<td>0.918600</td>
+<td>00:00</td>
+</tr>
+<tr class="odd">
+<td>4</td>
+<td>0.293716</td>
+<td>0.285339</td>
+<td>0.920900</td>
+<td>00:00</td>
+</tr>
+<tr class="even">
+<td>5</td>
+<td>0.283038</td>
+<td>0.277278</td>
+<td>0.922900</td>
+<td>00:00</td>
+</tr>
+<tr class="odd">
+<td>6</td>
+<td>0.273962</td>
+<td>0.275699</td>
+<td>0.920400</td>
+<td>00:00</td>
+</tr>
+<tr class="even">
+<td>7</td>
+<td>0.272748</td>
+<td>0.276465</td>
+<td>0.921400</td>
+<td>00:00</td>
+</tr>
+<tr class="odd">
+<td>8</td>
+<td>0.265907</td>
+<td>0.276644</td>
+<td>0.919700</td>
+<td>00:00</td>
+</tr>
+<tr class="even">
+<td>9</td>
+<td>0.279539</td>
+<td>0.274251</td>
+<td>0.921500</td>
+<td>00:00</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<p>So what we just did was rewrite the custom engine using prebuilt parts. We proved that our custom engine was almost as functional as the store-bought version (or COTS if you prefer). I say “almost” because we seemed to get an accuracy cap of 90% on our custom engine, but the optimized version capped around 92%.</p>
+</section>
+<section id="deep-learning-models" class="level2">
+<h2 class="anchored" data-anchor-id="deep-learning-models">Deep Learning Models</h2>
+<p>Remember earlier we talked about the difference between ML and DL as using <em>layers</em> of models. The way we do this is to apply more than one model and separate those models with a non-linearity. So, more fancy words. If we had a function <span class="math inline">\(y_1 = m_1 \times x +b_1\)</span> and another function <span class="math inline">\(y_2 = m_2 \times x+b_2\)</span>, we couldn’t just add these two together and expect a different type of function. If we did, we would just get <span class="math inline">\(y_{1+2} = m_{1+2} \times x+b_{1+2}\)</span>. The problem is that the model doesn’t care about the difference between <span class="math inline">\(m_1\)</span> and <span class="math inline">\(m_2\)</span>; it just see weights and a bias.</p>
+<p>We can <em>separate</em> these models with something like a Recitified Linear Unit (or ReLu). All it does is <span class="math inline">\(\text{ReLu}(x)\)</span> turns the number into zero if its negative, otherwise it leaves it alone. This little ReLu turns two linear models into a very simple neural net.</p>
+<p>The genius of this is that instead of fitting a line to data, we can fit several layers of Linear/ReLus to achieve a very precise function. Most data won’t be fit well by a linear model. However, almost all data can be fit by some arbitrarily large combination of linear models and ReLus.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="linear.png" class="img-fluid figure-img"></p>
+<figcaption>linear</figcaption>
+</figure>
+</div>
+<div id="e7ed1f35-50ac-4717-81a2-03dfb6172998" class="cell" data-execution_count="13">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb16"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>simple_net <span class="op">=</span> nn.Sequential(</span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>    nn.Linear(<span class="dv">28</span><span class="op">*</span><span class="dv">28</span>,<span class="dv">30</span>),</span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>    nn.ReLU(),</span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>    nn.Linear(<span class="dv">30</span>,<span class="dv">10</span>)</span>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a>learn <span class="op">=</span> Learner(dls, simple_net, opt_func<span class="op">=</span>SGD,</span>
+<span id="cb16-8"><a href="#cb16-8" aria-hidden="true" tabindex="-1"></a>                loss_func<span class="op">=</span>mnist_loss, metrics<span class="op">=</span>batch_accuracy)</span>
+<span id="cb16-9"><a href="#cb16-9" aria-hidden="true" tabindex="-1"></a>lr <span class="op">=</span> <span class="fl">.25</span></span>
+<span id="cb16-10"><a href="#cb16-10" aria-hidden="true" tabindex="-1"></a>learn.fit(<span class="dv">20</span>, lr<span class="op">=</span>lr)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output cell-output-display">
+
+<style>
+    /* Turns off some styling */
+    progress {
+        /* gets rid of default border in Firefox and Opera. */
+        border: none;
+        /* Needs to be in here for Safari polyfill so background images work as expected. */
+        background-size: auto;
+    }
+    progress:not([value]), progress:not([value])::-webkit-progress-bar {
+        background: repeating-linear-gradient(45deg, #7e7e7e, #7e7e7e 10px, #5c5c5c 10px, #5c5c5c 20px);
+    }
+    .progress-bar-interrupted, .progress-bar-interrupted::-webkit-progress-bar {
+        background: #F44336;
+    }
+</style>
+</div>
+<div class="cell-output cell-output-display">
+<table class="dataframe caption-top table table-sm table-striped small" data-quarto-postprocess="true" data-border="1">
+<thead>
+<tr class="header">
+<th data-quarto-table-cell-role="th">epoch</th>
+<th data-quarto-table-cell-role="th">train_loss</th>
+<th data-quarto-table-cell-role="th">valid_loss</th>
+<th data-quarto-table-cell-role="th">batch_accuracy</th>
+<th data-quarto-table-cell-role="th">time</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>0</td>
+<td>0.362304</td>
+<td>0.329384</td>
+<td>0.905600</td>
+<td>00:00</td>
+</tr>
+<tr class="even">
+<td>1</td>
+<td>0.278429</td>
+<td>0.249775</td>
+<td>0.928900</td>
+<td>00:00</td>
+</tr>
+<tr class="odd">
+<td>2</td>
+<td>0.237960</td>
+<td>0.229455</td>
+<td>0.930400</td>
+<td>00:00</td>
+</tr>
+<tr class="even">
+<td>3</td>
+<td>0.208032</td>
+<td>0.208346</td>
+<td>0.937100</td>
+<td>00:00</td>
+</tr>
+<tr class="odd">
+<td>4</td>
+<td>0.181758</td>
+<td>0.183263</td>
+<td>0.945700</td>
+<td>00:00</td>
+</tr>
+<tr class="even">
+<td>5</td>
+<td>0.167817</td>
+<td>0.172169</td>
+<td>0.949300</td>
+<td>00:00</td>
+</tr>
+<tr class="odd">
+<td>6</td>
+<td>0.157353</td>
+<td>0.155710</td>
+<td>0.953900</td>
+<td>00:00</td>
+</tr>
+<tr class="even">
+<td>7</td>
+<td>0.145984</td>
+<td>0.175108</td>
+<td>0.947600</td>
+<td>00:00</td>
+</tr>
+<tr class="odd">
+<td>8</td>
+<td>0.142243</td>
+<td>0.185708</td>
+<td>0.939700</td>
+<td>00:00</td>
+</tr>
+<tr class="even">
+<td>9</td>
+<td>0.131697</td>
+<td>0.151334</td>
+<td>0.953200</td>
+<td>00:00</td>
+</tr>
+<tr class="odd">
+<td>10</td>
+<td>0.120169</td>
+<td>0.140592</td>
+<td>0.957600</td>
+<td>00:00</td>
+</tr>
+<tr class="even">
+<td>11</td>
+<td>0.118723</td>
+<td>0.128918</td>
+<td>0.961100</td>
+<td>00:00</td>
+</tr>
+<tr class="odd">
+<td>12</td>
+<td>0.108958</td>
+<td>0.134065</td>
+<td>0.961300</td>
+<td>00:00</td>
+</tr>
+<tr class="even">
+<td>13</td>
+<td>0.101567</td>
+<td>0.130075</td>
+<td>0.960400</td>
+<td>00:00</td>
+</tr>
+<tr class="odd">
+<td>14</td>
+<td>0.105227</td>
+<td>0.120318</td>
+<td>0.961100</td>
+<td>00:00</td>
+</tr>
+<tr class="even">
+<td>15</td>
+<td>0.099600</td>
+<td>0.115329</td>
+<td>0.964500</td>
+<td>00:00</td>
+</tr>
+<tr class="odd">
+<td>16</td>
+<td>0.094892</td>
+<td>0.120461</td>
+<td>0.964300</td>
+<td>00:00</td>
+</tr>
+<tr class="even">
+<td>17</td>
+<td>0.097695</td>
+<td>0.119797</td>
+<td>0.963400</td>
+<td>00:00</td>
+</tr>
+<tr class="odd">
+<td>18</td>
+<td>0.091835</td>
+<td>0.141129</td>
+<td>0.958500</td>
+<td>00:00</td>
+</tr>
+<tr class="even">
+<td>19</td>
+<td>0.087854</td>
+<td>0.120385</td>
+<td>0.964300</td>
+<td>00:00</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="relu_2.png" class="img-fluid figure-img"></p>
+<figcaption>2relu</figcaption>
+</figure>
+</div>
+<p>We can keep going! We can use resnet18 which contains many more than 2 layers. These are the layers that we refer to when we say “deep learning”; its deep because it has so many layers of linear and nonlinear activations!</p>
+<div id="dcca2aa6-0305-4107-8851-7f770722b5eb" class="cell" data-execution_count="14">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb17"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>dls <span class="op">=</span> ImageDataLoaders.from_folder(</span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>    path,</span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a>    train<span class="op">=</span><span class="st">'training'</span>,</span>
+<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a>    valid<span class="op">=</span><span class="st">'testing'</span>,</span>
+<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a>    valid_pct<span class="op">=</span><span class="va">None</span>,        <span class="co"># use full test set</span></span>
+<span id="cb17-7"><a href="#cb17-7" aria-hidden="true" tabindex="-1"></a>    seed<span class="op">=</span><span class="dv">42</span>,</span>
+<span id="cb17-8"><a href="#cb17-8" aria-hidden="true" tabindex="-1"></a>    bs<span class="op">=</span><span class="dv">64</span>,                  <span class="co"># you can adjust batch size</span></span>
+<span id="cb17-9"><a href="#cb17-9" aria-hidden="true" tabindex="-1"></a>    item_tfms<span class="op">=</span>Resize(<span class="dv">224</span>)   <span class="co"># resnet needs larger images</span></span>
+<span id="cb17-10"><a href="#cb17-10" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb17-11"><a href="#cb17-11" aria-hidden="true" tabindex="-1"></a>learn <span class="op">=</span> vision_learner(dls, resnet18, pretrained<span class="op">=</span><span class="va">False</span>,</span>
+<span id="cb17-12"><a href="#cb17-12" aria-hidden="true" tabindex="-1"></a>                    loss_func<span class="op">=</span>F.cross_entropy, metrics<span class="op">=</span>accuracy)</span>
+<span id="cb17-13"><a href="#cb17-13" aria-hidden="true" tabindex="-1"></a>learn.fit_one_cycle(<span class="dv">1</span>, <span class="fl">0.1</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output cell-output-display">
+
+<style>
+    /* Turns off some styling */
+    progress {
+        /* gets rid of default border in Firefox and Opera. */
+        border: none;
+        /* Needs to be in here for Safari polyfill so background images work as expected. */
+        background-size: auto;
+    }
+    progress:not([value]), progress:not([value])::-webkit-progress-bar {
+        background: repeating-linear-gradient(45deg, #7e7e7e, #7e7e7e 10px, #5c5c5c 10px, #5c5c5c 20px);
+    }
+    .progress-bar-interrupted, .progress-bar-interrupted::-webkit-progress-bar {
+        background: #F44336;
+    }
+</style>
+</div>
+<div class="cell-output cell-output-display">
+<table class="dataframe caption-top table table-sm table-striped small" data-quarto-postprocess="true" data-border="1">
+<thead>
+<tr class="header">
+<th data-quarto-table-cell-role="th">epoch</th>
+<th data-quarto-table-cell-role="th">train_loss</th>
+<th data-quarto-table-cell-role="th">valid_loss</th>
+<th data-quarto-table-cell-role="th">accuracy</th>
+<th data-quarto-table-cell-role="th">time</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>0</td>
+<td>0.150041</td>
+<td>0.057427</td>
+<td>0.985800</td>
+<td>00:55</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</section>
+<section id="conclusion" class="level2">
+<h2 class="anchored" data-anchor-id="conclusion">Conclusion</h2>
+<p>Did we meet our goal? We wanted to classify digits in the MNIST dataset more accurately than our baseline of ~83%. We beat it immediately with our first ML model in around 2-3 epochs with 90%. We then optimized our code and got 92% accuracy. We used the simplest possible deep learning model, a 2-layer neural net with a non-linear activation, and got 96% accuracy. Then we used a more standard deep learning model, resnet 18, and got 98% accuracy in only one epoch. Granted, this last training took longer than the others.</p>
+<p>Ok so we learned a lot.</p>
+<ul>
+<li>Saw the difference in performance between baseline, ML, and DL</li>
+<li>Learned how to format data and optimize code.</li>
+<li>Got a grounding in the mathematical principles of ML and DL</li>
+</ul>
+<p>This was a hard project for me and I’m glad I finished. The hardest part was writing the code from scratch. Hopefully I never have to do that again, but at least I know I can if necessary. It’s pretty amazing to think about the potential of activating deep learning models on all sorts of intriguing datasets!</p>
+
+
+</section>
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+window.document.addEventListener("DOMContentLoaded", function (event) {
+  const toggleBodyColorMode = (bsSheetEl) => {
+    const mode = bsSheetEl.getAttribute("data-mode");
+    const bodyEl = window.document.querySelector("body");
+    if (mode === "dark") {
+      bodyEl.classList.add("quarto-dark");
+      bodyEl.classList.remove("quarto-light");
+    } else {
+      bodyEl.classList.add("quarto-light");
+      bodyEl.classList.remove("quarto-dark");
+    }
+  }
+  const toggleBodyColorPrimary = () => {
+    const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+    if (bsSheetEl) {
+      toggleBodyColorMode(bsSheetEl);
+    }
+  }
+  toggleBodyColorPrimary();  
+  const icon = "";
+  const anchorJS = new window.AnchorJS();
+  anchorJS.options = {
+    placement: 'right',
+    icon: icon
+  };
+  anchorJS.add('.anchored');
+  const isCodeAnnotation = (el) => {
+    for (const clz of el.classList) {
+      if (clz.startsWith('code-annotation-')) {                     
+        return true;
+      }
+    }
+    return false;
+  }
+  const onCopySuccess = function(e) {
+    // button target
+    const button = e.trigger;
+    // don't keep focus
+    button.blur();
+    // flash "checked"
+    button.classList.add('code-copy-button-checked');
+    var currentTitle = button.getAttribute("title");
+    button.setAttribute("title", "Copied!");
+    let tooltip;
+    if (window.bootstrap) {
+      button.setAttribute("data-bs-toggle", "tooltip");
+      button.setAttribute("data-bs-placement", "left");
+      button.setAttribute("data-bs-title", "Copied!");
+      tooltip = new bootstrap.Tooltip(button, 
+        { trigger: "manual", 
+          customClass: "code-copy-button-tooltip",
+          offset: [0, -8]});
+      tooltip.show();    
+    }
+    setTimeout(function() {
+      if (tooltip) {
+        tooltip.hide();
+        button.removeAttribute("data-bs-title");
+        button.removeAttribute("data-bs-toggle");
+        button.removeAttribute("data-bs-placement");
+      }
+      button.setAttribute("title", currentTitle);
+      button.classList.remove('code-copy-button-checked');
+    }, 1000);
+    // clear code selection
+    e.clearSelection();
+  }
+  const getTextToCopy = function(trigger) {
+      const codeEl = trigger.previousElementSibling.cloneNode(true);
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+  }
+  const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+    text: getTextToCopy
+  });
+  clipboard.on('success', onCopySuccess);
+  if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+    const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+      text: getTextToCopy,
+      container: window.document.getElementById('quarto-embedded-source-code-modal')
+    });
+    clipboardModal.on('success', onCopySuccess);
+  }
+    var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+    var mailtoRegex = new RegExp(/^mailto:/);
+      var filterRegex = new RegExp('/' + window.location.host + '/');
+    var isInternal = (href) => {
+        return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+    }
+    // Inspect non-navigation links and adorn them if external
+ 	var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+    for (var i=0; i<links.length; i++) {
+      const link = links[i];
+      if (!isInternal(link.href)) {
+        // undo the damage that might have been done by quarto-nav.js in the case of
+        // links that we want to consider external
+        if (link.dataset.originalHref !== undefined) {
+          link.href = link.dataset.originalHref;
+        }
+      }
+    }
+  function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+    const config = {
+      allowHTML: true,
+      maxWidth: 500,
+      delay: 100,
+      arrow: false,
+      appendTo: function(el) {
+          return el.parentElement;
+      },
+      interactive: true,
+      interactiveBorder: 10,
+      theme: 'quarto',
+      placement: 'bottom-start',
+    };
+    if (contentFn) {
+      config.content = contentFn;
+    }
+    if (onTriggerFn) {
+      config.onTrigger = onTriggerFn;
+    }
+    if (onUntriggerFn) {
+      config.onUntrigger = onUntriggerFn;
+    }
+    window.tippy(el, config); 
+  }
+  const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+  for (var i=0; i<noterefs.length; i++) {
+    const ref = noterefs[i];
+    tippyHover(ref, function() {
+      // use id or data attribute instead here
+      let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+      try { href = new URL(href).hash; } catch {}
+      const id = href.replace(/^#\/?/, "");
+      const note = window.document.getElementById(id);
+      if (note) {
+        return note.innerHTML;
+      } else {
+        return "";
+      }
+    });
+  }
+  const xrefs = window.document.querySelectorAll('a.quarto-xref');
+  const processXRef = (id, note) => {
+    // Strip column container classes
+    const stripColumnClz = (el) => {
+      el.classList.remove("page-full", "page-columns");
+      if (el.children) {
+        for (const child of el.children) {
+          stripColumnClz(child);
+        }
+      }
+    }
+    stripColumnClz(note)
+    if (id === null || id.startsWith('sec-')) {
+      // Special case sections, only their first couple elements
+      const container = document.createElement("div");
+      if (note.children && note.children.length > 2) {
+        container.appendChild(note.children[0].cloneNode(true));
+        for (let i = 1; i < note.children.length; i++) {
+          const child = note.children[i];
+          if (child.tagName === "P" && child.innerText === "") {
+            continue;
+          } else {
+            container.appendChild(child.cloneNode(true));
+            break;
+          }
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(container);
+        }
+        return container.innerHTML
+      } else {
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        return note.innerHTML;
+      }
+    } else {
+      // Remove any anchor links if they are present
+      const anchorLink = note.querySelector('a.anchorjs-link');
+      if (anchorLink) {
+        anchorLink.remove();
+      }
+      if (window.Quarto?.typesetMath) {
+        window.Quarto.typesetMath(note);
+      }
+      if (note.classList.contains("callout")) {
+        return note.outerHTML;
+      } else {
+        return note.innerHTML;
+      }
+    }
+  }
+  for (var i=0; i<xrefs.length; i++) {
+    const xref = xrefs[i];
+    tippyHover(xref, undefined, function(instance) {
+      instance.disable();
+      let url = xref.getAttribute('href');
+      let hash = undefined; 
+      if (url.startsWith('#')) {
+        hash = url;
+      } else {
+        try { hash = new URL(url).hash; } catch {}
+      }
+      if (hash) {
+        const id = hash.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note !== null) {
+          try {
+            const html = processXRef(id, note.cloneNode(true));
+            instance.setContent(html);
+          } finally {
+            instance.enable();
+            instance.show();
+          }
+        } else {
+          // See if we can fetch this
+          fetch(url.split('#')[0])
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.getElementById(id);
+            if (note !== null) {
+              const html = processXRef(id, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      } else {
+        // See if we can fetch a full url (with no hash to target)
+        // This is a special case and we should probably do some content thinning / targeting
+        fetch(url)
+        .then(res => res.text())
+        .then(html => {
+          const parser = new DOMParser();
+          const htmlDoc = parser.parseFromString(html, "text/html");
+          const note = htmlDoc.querySelector('main.content');
+          if (note !== null) {
+            // This should only happen for chapter cross references
+            // (since there is no id in the URL)
+            // remove the first header
+            if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+              note.children[0].remove();
+            }
+            const html = processXRef(null, note);
+            instance.setContent(html);
+          } 
+        }).finally(() => {
+          instance.enable();
+          instance.show();
+        });
+      }
+    }, function(instance) {
+    });
+  }
+      let selectedAnnoteEl;
+      const selectorForAnnotation = ( cell, annotation) => {
+        let cellAttr = 'data-code-cell="' + cell + '"';
+        let lineAttr = 'data-code-annotation="' +  annotation + '"';
+        const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+        return selector;
+      }
+      const selectCodeLines = (annoteEl) => {
+        const doc = window.document;
+        const targetCell = annoteEl.getAttribute("data-target-cell");
+        const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+        const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+        const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+        const lineIds = lines.map((line) => {
+          return targetCell + "-" + line;
+        })
+        let top = null;
+        let height = null;
+        let parent = null;
+        if (lineIds.length > 0) {
+            //compute the position of the single el (top and bottom and make a div)
+            const el = window.document.getElementById(lineIds[0]);
+            top = el.offsetTop;
+            height = el.offsetHeight;
+            parent = el.parentElement.parentElement;
+          if (lineIds.length > 1) {
+            const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+            const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+            height = bottom - top;
+          }
+          if (top !== null && height !== null && parent !== null) {
+            // cook up a div (if necessary) and position it 
+            let div = window.document.getElementById("code-annotation-line-highlight");
+            if (div === null) {
+              div = window.document.createElement("div");
+              div.setAttribute("id", "code-annotation-line-highlight");
+              div.style.position = 'absolute';
+              parent.appendChild(div);
+            }
+            div.style.top = top - 2 + "px";
+            div.style.height = height + 4 + "px";
+            div.style.left = 0;
+            let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+            if (gutterDiv === null) {
+              gutterDiv = window.document.createElement("div");
+              gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+              gutterDiv.style.position = 'absolute';
+              const codeCell = window.document.getElementById(targetCell);
+              const gutter = codeCell.querySelector('.code-annotation-gutter');
+              gutter.appendChild(gutterDiv);
+            }
+            gutterDiv.style.top = top - 2 + "px";
+            gutterDiv.style.height = height + 4 + "px";
+          }
+          selectedAnnoteEl = annoteEl;
+        }
+      };
+      const unselectCodeLines = () => {
+        const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+        elementsIds.forEach((elId) => {
+          const div = window.document.getElementById(elId);
+          if (div) {
+            div.remove();
+          }
+        });
+        selectedAnnoteEl = undefined;
+      };
+        // Handle positioning of the toggle
+    window.addEventListener(
+      "resize",
+      throttle(() => {
+        elRect = undefined;
+        if (selectedAnnoteEl) {
+          selectCodeLines(selectedAnnoteEl);
+        }
+      }, 10)
+    );
+    function throttle(fn, ms) {
+    let throttle = false;
+    let timer;
+      return (...args) => {
+        if(!throttle) { // first call gets through
+            fn.apply(this, args);
+            throttle = true;
+        } else { // all the others get throttled
+            if(timer) clearTimeout(timer); // cancel #2
+            timer = setTimeout(() => {
+              fn.apply(this, args);
+              timer = throttle = false;
+            }, ms);
+        }
+      };
+    }
+      // Attach click handler to the DT
+      const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+      for (const annoteDlNode of annoteDls) {
+        annoteDlNode.addEventListener('click', (event) => {
+          const clickedEl = event.target;
+          if (clickedEl !== selectedAnnoteEl) {
+            unselectCodeLines();
+            const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+            if (activeEl) {
+              activeEl.classList.remove('code-annotation-active');
+            }
+            selectCodeLines(clickedEl);
+            clickedEl.classList.add('code-annotation-active');
+          } else {
+            // Unselect the line
+            unselectCodeLines();
+            clickedEl.classList.remove('code-annotation-active');
+          }
+        });
+      }
+  const findCites = (el) => {
+    const parentEl = el.parentElement;
+    if (parentEl) {
+      const cites = parentEl.dataset.cites;
+      if (cites) {
+        return {
+          el,
+          cites: cites.split(' ')
+        };
+      } else {
+        return findCites(el.parentElement)
+      }
+    } else {
+      return undefined;
+    }
+  };
+  var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+  for (var i=0; i<bibliorefs.length; i++) {
+    const ref = bibliorefs[i];
+    const citeInfo = findCites(ref);
+    if (citeInfo) {
+      tippyHover(citeInfo.el, function() {
+        var popup = window.document.createElement('div');
+        citeInfo.cites.forEach(function(cite) {
+          var citeDiv = window.document.createElement('div');
+          citeDiv.classList.add('hanging-indent');
+          citeDiv.classList.add('csl-entry');
+          var biblioDiv = window.document.getElementById('ref-' + cite);
+          if (biblioDiv) {
+            citeDiv.innerHTML = biblioDiv.innerHTML;
+          }
+          popup.appendChild(citeDiv);
+        });
+        return popup.innerHTML;
+      });
+    }
+  }
+});
+</script>
+</div> <!-- /content -->
+
+
+
+
+</body></html>

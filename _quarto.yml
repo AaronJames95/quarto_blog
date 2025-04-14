@@ -1,22 +1,22 @@
 project:
   type: website
-  output-dir: docs
+  output-dir: docs    
 
 website:
-  title: "myblog"
+  title: "Learning Learning"
   navbar:
     left:
-      - href: index.qmd
-        text: Home
-      - about.qmd
+      - text: Home
+        href: index.qmd
+      - text: Posts
+        href: blog.qmd
+      - text: About
+        href: about.qmd
 
 format:
   html:
     theme:
-      - cosmo
+      - superhero
       - brand
-    css: styles.css
     toc: true
-
-
 

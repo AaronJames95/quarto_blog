@@ -8,7 +8,7 @@
 
 <meta name="dcterms.date" content="2025-03-22">
 
-<title>Training an Emotional Face Classifier – myblog</title>
+<title>Training an Emotional Face Classifier – Learning Learning</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -107,7 +107,6 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <script src="https://unpkg.com/@jupyter-widgets/html-manager@*/dist/embed-amd.js" crossorigin="anonymous"></script>
 
 
-<link rel="stylesheet" href="../../styles.css">
 </head>
 
 <body class="nav-fixed">
@@ -118,7 +117,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
       <div class="navbar-container container-fluid">
       <div class="navbar-brand-container mx-auto">
     <a class="navbar-brand" href="../../index.html">
-    <span class="navbar-title">myblog</span>
+    <span class="navbar-title">Learning Learning</span>
     </a>
   </div>
             <div id="quarto-search" class="" title="Search"></div>
@@ -130,6 +129,10 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <li class="nav-item">
     <a class="nav-link" href="../../index.html"> 
 <span class="menu-text">Home</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../../blog.html"> 
+<span class="menu-text">Posts</span></a>
   </li>  
   <li class="nav-item">
     <a class="nav-link" href="../../about.html"> 
@@ -171,8 +174,10 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <div class="quarto-title">
 <h1 class="title">Training an Emotional Face Classifier</h1>
   <div class="quarto-categories">
-    <div class="quarto-category">python</div>
-    <div class="quarto-category">data</div>
+    <div class="quarto-category">machine learning</div>
+    <div class="quarto-category">tutorial</div>
+    <div class="quarto-category">fastai</div>
+    <div class="quarto-category">computer-vision</div>
   </div>
   </div>
 
@@ -196,12 +201,18 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </header>
 
 
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="emotions.jpeg" class="img-fluid figure-img"></p>
+<figcaption>image</figcaption>
+</figure>
+</div>
 <p>Ok I have been trying to get this thing posted for weeks and its finally time now. First step, what am I even doing. Well, broadly the goal is to get a decent understanding of deep learning concepts and apply them to subject matter I find interesting. I see this stage as learning to read sheet music and musc theory before I can create compositions.</p>
 <p>The first step is going to be training the model. It’s taken me a while to decide what I want to train it on. Originally I wanted to do something music related, but now the desire to get something UP and POSTED has made me go with my first idea of emotion recognition in human faces.</p>
 <section id="begin-creating-the-dataset" class="level1">
 <h1>Begin Creating the Dataset</h1>
 <p>Before I get into any DL/ML specific things, I first have to import the fastai package into the notebook. So, that’s what we see below:</p>
-<div id="cell-5" class="cell" data-execution_count="2">
+<div id="cell-6" class="cell" data-execution_count="2">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co">#hide</span></span>
@@ -210,7 +221,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>fastbook.setup_book()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 </div>
-<div id="cell-6" class="cell" data-execution_count="3">
+<div id="cell-7" class="cell" data-execution_count="3">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co">#hide</span></span>
@@ -219,7 +230,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </details>
 </div>
 <p>Theoretially the pakage is set up. Now I need some data. Since this is my first post, I’m just going to use duckduckgo to grab some images from the internet. In practice, datasets must be curated more carefully than this. I’ll use one trick I learned, but there are issues with going directly to image search. One of the biggest is that the data usually ends up being pretty biased. My guess is that if I do it this way I’ll get an attractive white people emotion analyzer, rather than a people analyzer. We’ll see…</p>
-<div id="cell-8" class="cell" data-outputid="4c1d9ea3-db3a-499c-f430-87617892ace9" data-execution_count="4">
+<div id="cell-9" class="cell" data-outputid="4c1d9ea3-db3a-499c-f430-87617892ace9" data-execution_count="4">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>results <span class="op">=</span> search_images_ddg(<span class="st">'joyful face'</span>)</span>
@@ -230,7 +241,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <pre><code>200</code></pre>
 </div>
 </div>
-<div id="cell-9" class="cell" data-outputid="bd1cde24-55dd-4a09-b53e-c1ef8c24aac1" data-tags="[&quot;hide-output&quot;]" data-execution_count="5">
+<div id="cell-10" class="cell" data-outputid="bd1cde24-55dd-4a09-b53e-c1ef8c24aac1" data-tags="[&quot;hide-output&quot;]" data-execution_count="5">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>dest <span class="op">=</span> <span class="st">'images/test.jpg'</span></span>
@@ -238,7 +249,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>ims[<span class="dv">1</span>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 </div>
-<div id="cell-10" class="cell" data-outputid="4f43e653-feb1-42fe-c728-7d01b2183b8b" data-execution_count="7">
+<div id="cell-11" class="cell" data-outputid="4f43e653-feb1-42fe-c728-7d01b2183b8b" data-execution_count="7">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>im <span class="op">=</span> Image.<span class="bu">open</span>(dest)</span>
@@ -255,7 +266,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <p>Ok, this is a great example of why going straight to image search is bad. The first image I got was <a href="https://c8.alamy.com/comp/FTFFGG/cartoon-happy-female-face-with-speech-bubble-FTFFGG.jpg">this</a></p>
 <p>The image is a cartoon face with speech bubble. So maybe this blog post is “why you shouldn’t use a naive image search for building models, but how to fight through the pain anyway.”</p>
 <p>Let’s see if tweaking the search term helps…</p>
-<div id="cell-12" class="cell" data-outputid="427de165-69ae-4b7c-f528-c415418aafef" data-tags="[&quot;hide-output&quot;]" data-execution_count="15">
+<div id="cell-13" class="cell" data-outputid="427de165-69ae-4b7c-f528-c415418aafef" data-tags="[&quot;hide-output&quot;]" data-execution_count="15">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>results <span class="op">=</span> search_images_ddg(<span class="st">'joyful human face photo'</span>)</span>
@@ -269,7 +280,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 <p>Okay great, we definitely got a human <a href="https://thumbs.dreamstime.com/z/close-up-portrait-smiling-laughing-attractive-man-happy-face-human-emotion-expression-having-fun-joy-camera-152138665.jpg">this time</a>. Still though we can’t see if ALL of our images are of humans, nor can we tell if we have a decent demographic distribution. Just highlighting the necessities of data curation and bias analysis. Technically it could be possible that this bias wouldn’t impact the deployment. In my case, my goal is not to make a robust emotions classifier but to make a simple deployed proof of concept, so I’m pressing on 😁.</p>
 <p>Speeding things up, we can add the classifications ‘sad’ and ‘neutral’ to our options.</p>
-<div id="cell-15" class="cell" data-outputid="64035108-d1ad-473f-bd52-f4e132463f99" data-tags="[&quot;hide-output&quot;]" data-execution_count="16">
+<div id="cell-16" class="cell" data-outputid="64035108-d1ad-473f-bd52-f4e132463f99" data-tags="[&quot;hide-output&quot;]" data-execution_count="16">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="co">#hide</span></span>
@@ -287,7 +298,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 <p>Another thing I noticed as I searched for face manually is that SO MANY of them are AI generated. Train a model of human emotion recognition on AI generated images of human faces does not seem like a good idea for any production level systems.</p>
 <p>We’ll go ahead and review our downloaded photos for any images that had errors during file trasnfer</p>
-<div id="cell-17" class="cell" data-outputid="7b3fca9a-b5e5-418b-db53-24eb68ef5941" data-execution_count="17">
+<div id="cell-18" class="cell" data-outputid="7b3fca9a-b5e5-418b-db53-24eb68ef5941" data-execution_count="17">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>failed <span class="op">=</span> verify_images(get_image_files(path))</span>
@@ -304,7 +315,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <p>We have a dataset of emotions now! The dataset has not been curated though which can result in some issues as we discussed previously. Interestingly, I do not have the time to sort through 600 photos at this point. To aid me in my curation I will train the model first, and use the loss of each image to determine where some of the hiccups in data may be.</p>
 <p>This method is detailed by Jeremy Howard in his book/course <a href="https://course.fast.ai/">Practical Deep Learning</a>.</p>
 <p>But before we do any of that we’ll need to create a training and a validation set from our data. We will use fastai’s <code>DataLoader's</code> class.</p>
-<div id="cell-21" class="cell" data-execution_count="18">
+<div id="cell-22" class="cell" data-execution_count="18">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>faces <span class="op">=</span> DataBlock(</span>
@@ -317,7 +328,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </details>
 </div>
 <p>A Quick Note. We use random resized crop to give us a little “extra” data here. It takes small sections of each photo and performs some standard image manipulation (data augmentation). This makes it seem like there’s extra data to our model which needs all the help it can get. At this stage, we haven’t curated our datset.</p>
-<div id="cell-23" class="cell" data-execution_count="19">
+<div id="cell-24" class="cell" data-execution_count="19">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb12"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>faces <span class="op">=</span> faces.new(</span>
@@ -326,7 +337,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>dls <span class="op">=</span> faces.dataloaders(path)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 </div>
-<div id="cell-24" class="cell" data-outputid="aba3c5ca-8962-4305-de10-c6df8cfd64fc" data-execution_count="20">
+<div id="cell-25" class="cell" data-outputid="aba3c5ca-8962-4305-de10-c6df8cfd64fc" data-execution_count="20">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>dls.valid.show_batch(max_n<span class="op">=</span><span class="dv">4</span>, nrows<span class="op">=</span><span class="dv">1</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
@@ -340,7 +351,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 </div>
 <p>Now we have enough data to train the model. We’ll see how the model performs.</p>
-<div id="cell-26" class="cell" data-outputid="2abf44e0-f720-4497-9d6a-591cc612cdb8" data-execution_count="21">
+<div id="cell-27" class="cell" data-outputid="2abf44e0-f720-4497-9d6a-591cc612cdb8" data-execution_count="21">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb14"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>learn <span class="op">=</span> vision_learner(dls, resnet18, metrics<span class="op">=</span>error_rate)</span>
@@ -450,7 +461,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 <p>Ok the first training batch has it set so that the error rate is around 24.4%. Seems to be decent. It’s much better than the starting rate of 42%.</p>
 <p>We want to know if we can improve this error rate by curating the dataset.</p>
-<div id="cell-28" class="cell" data-outputid="faa17a62-2491-4bc4-ef37-7ce00ce19853" data-execution_count="22">
+<div id="cell-29" class="cell" data-outputid="faa17a62-2491-4bc4-ef37-7ce00ce19853" data-execution_count="22">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb15"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>interp <span class="op">=</span> ClassificationInterpretation.from_learner(learn)</span>
@@ -507,7 +518,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 </div>
 <p>This confusion matrix helps determine where the errors are. Another way we can see where the errors are is using fastai’s loss plotting tool:</p>
-<div id="cell-30" class="cell" data-outputid="63f88986-0d1c-45a8-f247-1c9d737aa2fe" data-execution_count="23">
+<div id="cell-31" class="cell" data-outputid="63f88986-0d1c-45a8-f247-1c9d737aa2fe" data-execution_count="23">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb16"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>interp.plot_top_losses(<span class="dv">5</span>, nrows<span class="op">=</span><span class="dv">1</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
@@ -549,7 +560,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </ul>
 <p>Part of what I want to do here is explain some of the issues with data curation. I could go back and change my search terms to get rid of some of these issues, but this helps me show the issues with a naive search better.</p>
 <p>Fortunately, fastai provides a tool for removing the high-loss images from the datasets.</p>
-<div id="cell-32" class="cell" data-outputid="30c04acf-8263-404c-d6f6-c7c2fd9428df" data-execution_count="24">
+<div id="cell-33" class="cell" data-outputid="30c04acf-8263-404c-d6f6-c7c2fd9428df" data-execution_count="24">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb17"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="co">#hide_output</span></span>
@@ -604,7 +615,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </script>
 </div>
 </div>
-<div id="cell-33" class="cell" data-execution_count="30">
+<div id="cell-34" class="cell" data-execution_count="30">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb18"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="co"># hide</span></span>
@@ -624,7 +635,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="training-the-model-round-2" class="level1">
 <h1>Training the Model (Round 2)</h1>
-<div id="cell-38" class="cell" data-execution_count="39">
+<div id="cell-39" class="cell" data-execution_count="39">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb19"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>faces <span class="op">=</span> DataBlock(</span>
@@ -640,7 +651,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb19-11"><a href="#cb19-11" aria-hidden="true" tabindex="-1"></a>dls <span class="op">=</span> faces.dataloaders(path)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 </div>
-<div id="cell-39" class="cell" data-outputid="aba3c5ca-8962-4305-de10-c6df8cfd64fc" data-execution_count="40">
+<div id="cell-40" class="cell" data-outputid="aba3c5ca-8962-4305-de10-c6df8cfd64fc" data-execution_count="40">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb20"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a>dls.valid.show_batch(max_n<span class="op">=</span><span class="dv">4</span>, nrows<span class="op">=</span><span class="dv">1</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
@@ -654,7 +665,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 </div>
 <p>Why are there weird new images? These were always present in the dataset, and for some reason they did not propagate to the top of the cleaner. The cleaner only shows the hardest images for the model to classify (by their “loss” values). It’s possible these images didn’t have the highest loss values in their respective categories.</p>
-<div id="cell-41" class="cell" data-outputid="2abf44e0-f720-4497-9d6a-591cc612cdb8" data-execution_count="41">
+<div id="cell-42" class="cell" data-outputid="2abf44e0-f720-4497-9d6a-591cc612cdb8" data-execution_count="41">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb21"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>learn <span class="op">=</span> vision_learner(dls, resnet18, metrics<span class="op">=</span>error_rate)</span>
@@ -762,7 +773,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </table>
 </div>
 </div>
-<div id="cell-42" class="cell" data-outputid="faa17a62-2491-4bc4-ef37-7ce00ce19853" data-execution_count="42">
+<div id="cell-43" class="cell" data-outputid="faa17a62-2491-4bc4-ef37-7ce00ce19853" data-execution_count="42">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb22"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a>interp <span class="op">=</span> ClassificationInterpretation.from_learner(learn)</span>
@@ -819,7 +830,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 </div>
 <p>Ok, so we can see that cleaning the data did actually improve the performance of the model. We can see the error rate decreased from 24.4% to 18.2%. Aditionally we can see that the confusion matrix is much more precise. There is only one square outside of the main diagonal that is slightly blue. So yes, this tool is effective and it helps us improve the model.</p>
-<div id="cell-44" class="cell" data-execution_count="45">
+<div id="cell-45" class="cell" data-execution_count="45">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb23"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a>learn.export(<span class="st">'model.pkl'</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>

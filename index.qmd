@@ -1,8 +1,9 @@
 ---
-title: "myblog"
+title: "Learning Learning"
 ---
 
 ## Latest Project
 
-Check out my recent post:  
-👉 [Emotion Classifier](posts/emotions_classifier/)
+Check out my recent posts:  
+👉 [Classifying MNIST Digits (1)](_posts/2025_04_14_MNIST_p1/)
+👉 [Classifying MNIST Digits (2)](_posts/2025_04_14_MNIST_p2/)

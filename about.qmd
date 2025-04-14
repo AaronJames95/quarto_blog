@@ -1,5 +1,28 @@
 ---
-title: "About"
+title: "Aaron James"
+about:
+  template: trestles
+  image: profile.jpg
+  links:
+    - icon: twitter
+      text: twitter
+      href: https://x.com/AaronJames_95
+    - icon: github
+      text: Github
+      href: https://github.com/AaronJames_95
 ---
 
-About this site
+Aaron James is a life long learner with a passion for reducing the risks of widespread AI adoption. When not focusing on this, Aaron enjoys performing music and connecting with like-minded humans.
+
+## Education
+
+Carnegie-Mellon University | Pittsburgh, PA
+
+B.S. Mechanical Engineering | Dec 2020
+
+## Experience
+
+Outlier.ai | SME Math/Physics/Python | Jan 2024 - Present
+
+Bowler Pons Solutions Consultants LLC | Solutions Engineer | June 2021 - Mar 2023
+
