@@ -1,0 +1,1902 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.6.42">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<title>How I Trained Resnet 50 on the Oxford Flowers Dataset – Learning Learning</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { display: inline-block; text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js" integrity="sha512-bLT0Qm9VnAYZDflyKcBaQ2gg0hSYNQrJ8RilYldYQ1FxQYoCLtUjuuRuZo+fjqhx/qtq/1itJ0C2ejDxltZVFg==" crossorigin="anonymous"></script><script src="site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="site_libs/quarto-nav/headroom.min.js"></script>
+<script src="site_libs/clipboard/clipboard.min.js"></script>
+<script src="site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="site_libs/quarto-search/fuse.min.js"></script>
+<script src="site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="./">
+<script src="site_libs/quarto-html/quarto.js"></script>
+<script src="site_libs/quarto-html/popper.min.js"></script>
+<script src="site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="site_libs/quarto-html/anchor.min.js"></script>
+<link href="site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="site_libs/quarto-html/quarto-syntax-highlighting-dark-b53751a350365c71b6c909e95f209ed1.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="site_libs/bootstrap/bootstrap-cbb8612797ca2f5ea6d72598314dc22e.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="dark">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" integrity="sha512-c3Nl8+7g4LMSTdrm621y7kf9v3SDPnhxLNhcjFJbKECVnmZHTdo+IRO05sNLTH/D3vA6u1X32ehoLC7WFVdheg==" crossorigin="anonymous"></script>
+
+<script type="application/javascript">define('jquery', [],function() {return window.jQuery;})</script>
+
+
+</head>
+
+<body class="nav-fixed">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+    <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container mx-auto">
+    <a class="navbar-brand" href="./index.html">
+    <span class="navbar-title">Learning Learning</span>
+    </a>
+  </div>
+            <div id="quarto-search" class="" title="Search"></div>
+          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" role="menu" aria-expanded="false" aria-label="Toggle navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+  <span class="navbar-toggler-icon"></span>
+</button>
+          <div class="collapse navbar-collapse" id="navbarCollapse">
+            <ul class="navbar-nav navbar-nav-scroll me-auto">
+  <li class="nav-item">
+    <a class="nav-link" href="./index.html"> 
+<span class="menu-text">Home</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="./about.html"> 
+<span class="menu-text">About</span></a>
+  </li>  
+</ul>
+          </div> <!-- /navcollapse -->
+            <div class="quarto-navbar-tools">
+</div>
+      </div> <!-- /container-fluid -->
+    </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
+<!-- sidebar -->
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#read-and-interpret-raw-data" id="toc-read-and-interpret-raw-data" class="nav-link active" data-scroll-target="#read-and-interpret-raw-data">Read and Interpret Raw Data</a></li>
+  <li><a href="#execute-data-splits-computationally" id="toc-execute-data-splits-computationally" class="nav-link" data-scroll-target="#execute-data-splits-computationally">Execute Data Splits Computationally</a></li>
+  <li><a href="#baseline-the-model" id="toc-baseline-the-model" class="nav-link" data-scroll-target="#baseline-the-model">Baseline the Model</a></li>
+  <li><a href="#optimizing-the-model" id="toc-optimizing-the-model" class="nav-link" data-scroll-target="#optimizing-the-model">Optimizing the Model</a>
+  <ul class="collapse">
+  <li><a href="#effect-of-image-transforms" id="toc-effect-of-image-transforms" class="nav-link" data-scroll-target="#effect-of-image-transforms">Effect of Image Transforms</a></li>
+  <li><a href="#experimenting-with-test-time-augmentation" id="toc-experimenting-with-test-time-augmentation" class="nav-link" data-scroll-target="#experimenting-with-test-time-augmentation">Experimenting with Test Time Augmentation</a></li>
+  </ul></li>
+  <li><a href="#final-model" id="toc-final-model" class="nav-link" data-scroll-target="#final-model">Final Model</a></li>
+  <li><a href="#conclusion" id="toc-conclusion" class="nav-link" data-scroll-target="#conclusion">Conclusion</a>
+  <ul class="collapse">
+  <li><a href="#furthering-results" id="toc-furthering-results" class="nav-link" data-scroll-target="#furthering-results">Furthering Results</a></li>
+  </ul></li>
+  </ul>
+</nav>
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">How I Trained Resnet 50 on the Oxford Flowers Dataset</h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="oxford_flowers.jpg" class="img-fluid figure-img"></p>
+<figcaption>oxford_flowers.jpg</figcaption>
+</figure>
+</div>
+<p>I’m applying to an AI fellowship, and this was their application project. I needed to use the resnet50 CNN model and fine tune it to be able to classify the flowers from the Oxford Flowers dataset. In this post, I detail how I was able to do this and beat the original accuracy in the paper.</p>
+<p>I’ve been working through fastai’s course <a href="https://course.fast.ai/">Part 1</a>, so I’ll be using their framework for this challenge. I also just finished the sixth lesson, which references Jeremy Howard’s “<a href="https://www.kaggle.com/code/jhoward/first-steps-road-to-the-top-part-1">Road to the Top</a>” series of kaggle notebooks. I’m mostly implementing the methodology used there on this dataset.</p>
+<div id="7f042903-0e9a-464d-b55d-5d8e8131bb0b" class="cell" data-execution_count="1">
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> fastai.imports <span class="im">import</span> <span class="op">*</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> fastai.vision.<span class="bu">all</span> <span class="im">import</span> <span class="op">*</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> fastai.data.<span class="bu">all</span> <span class="im">import</span> <span class="op">*</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<section id="read-and-interpret-raw-data" class="level1">
+<h1>Read and Interpret Raw Data</h1>
+<p>The first thing I need to do is to understand what I’ve downloaded. The .readme file helps, but I want to make sure I understand how the dataset is constructed. I want to prepare to split the data into its splits as well (train, test, validation).</p>
+<div id="6d5c23a3-8043-4b25-ba60-c1a2639cd81c" class="cell" data-execution_count="2">
+<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> scipy.io <span class="im">import</span> loadmat</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>data_splits <span class="op">=</span> loadmat(<span class="st">'setid.mat'</span>)</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>data_splits</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="2">
+<pre><code>{'__header__': b'MATLAB 5.0 MAT-file, Platform: GLNX86, Created on: Thu Feb 19 17:38:58 2009',
+ '__version__': '1.0',
+ '__globals__': [],
+ 'trnid': array([[6765, 6755, 6768, ..., 8026, 8036, 8041]], dtype=uint16),
+ 'valid': array([[6773, 6767, 6739, ..., 8028, 8008, 8030]], dtype=uint16),
+ 'tstid': array([[6734, 6735, 6737, ..., 8044, 8045, 8047]], dtype=uint16)}</code></pre>
+</div>
+</div>
+<p>Ok that’s great. I can see how the .mat file stores the ids for the splits and now I’ll load them into memory and check if the splits make sense.</p>
+<div id="c14552e6-be98-4277-9597-1b0e4c81e8a9" class="cell" data-execution_count="3">
+<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>trn_idxs <span class="op">=</span> data_splits[<span class="st">'trnid'</span>].squeeze()</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>val_idxs <span class="op">=</span> data_splits[<span class="st">'valid'</span>].squeeze()</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>tst_idxs <span class="op">=</span> data_splits[<span class="st">'tstid'</span>].squeeze()</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="bu">len</span>(trn_idxs), <span class="bu">len</span>(val_idxs), <span class="bu">len</span>(tst_idxs)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="3">
+<pre><code>(1020, 1020, 6149)</code></pre>
+</div>
+</div>
+<p>I’m suprised by this breakdown. I would have expected most of the data to be in the training set, then the validation set, then the test set. Since there are ~100 categories, we really only have around 10 images per flower in our training set (I’m estimating). It seems like it would be fairly difficult for the model to generalize with this amount of data.</p>
+<p>Now we need the labels for each image loaded into memory. For this, I’ll need to open another .mat file that contains them and analyze its contents.</p>
+<div id="5a2ce0b5-bce7-4918-b68b-ab057f95c5c6" class="cell" data-execution_count="4">
+<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> scipy.io <span class="im">import</span> loadmat</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>image_labels <span class="op">=</span> loadmat(<span class="st">'imagelabels.mat'</span>)</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>image_labels</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="4">
+<pre><code>{'__header__': b'MATLAB 5.0 MAT-file, Platform: GLNX86, Created on: Thu Feb 19 15:43:33 2009',
+ '__version__': '1.0',
+ '__globals__': [],
+ 'labels': array([[77, 77, 77, ..., 62, 62, 62]], dtype=uint8)}</code></pre>
+</div>
+</div>
+<p>Hm. I’m assuming that the index of the labels array corresponds to the number of the image in the original dataset. If the total number of indexes across all splits is exactly the same as the length of the labels array, I’ll continue with this assumption.</p>
+<div id="289beff2-fa65-47b0-b9e9-1264fc3d7c36" class="cell" data-execution_count="5">
+<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>labels <span class="op">=</span> image_labels[<span class="st">'labels'</span>].squeeze()</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span>(<span class="bu">sum</span>([<span class="bu">len</span>(trn_idxs), <span class="bu">len</span>(val_idxs), <span class="bu">len</span>(tst_idxs)]) <span class="op">==</span> <span class="bu">len</span>(labels))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Ok, well there you go.</p>
+</section>
+<section id="execute-data-splits-computationally" class="level1">
+<h1>Execute Data Splits Computationally</h1>
+<p>I realized I could download the data from fastai directly, so let’s do that. I’m assuming this means it’ll be formatted in a more friendly manner.</p>
+<div id="c0953ebc-36c2-4cd2-986b-b041b1163051" class="cell" data-execution_count="6">
+<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>path <span class="op">=</span> untar_data(URLs.FLOWERS)</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>path.ls()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="6">
+<pre><code>(#7) [Path('/home/aharon/.fastai/data/oxford-102-flowers/smaller'),Path('/home/aharon/.fastai/data/oxford-102-flowers/oxford_flower_102_name.csv'),Path('/home/aharon/.fastai/data/oxford-102-flowers/jpg'),Path('/home/aharon/.fastai/data/oxford-102-flowers/flower_final.pkl'),Path('/home/aharon/.fastai/data/oxford-102-flowers/train.txt'),Path('/home/aharon/.fastai/data/oxford-102-flowers/test.txt'),Path('/home/aharon/.fastai/data/oxford-102-flowers/valid.txt')]</code></pre>
+</div>
+</div>
+<p>This data is formatted slightly differently. The main difference is that now we have three text files that outline each data split, its filepaths, and their labels. The <a href="https://docs.fast.ai/data.external.html">fastai docs</a> actually state that the downloaded dataset only has 17 categories. I want to confirm whether or not that is actually true so I can determine which format to use.</p>
+<div id="856c4c90-30a9-4d5c-bfcc-5ba10d3a6162" class="cell" data-execution_count="7">
+<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>train_df <span class="op">=</span> pd.read_csv(path<span class="op">/</span><span class="st">'train.txt'</span>, sep<span class="op">=</span><span class="st">' '</span>, header<span class="op">=</span><span class="va">None</span>, names<span class="op">=</span>[<span class="st">'fname'</span>, <span class="st">'label'</span>])</span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>valid_df <span class="op">=</span> pd.read_csv(path<span class="op">/</span><span class="st">'valid.txt'</span>, sep<span class="op">=</span><span class="st">' '</span>, header<span class="op">=</span><span class="va">None</span>, names<span class="op">=</span>[<span class="st">'fname'</span>, <span class="st">'label'</span>])</span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>test_df <span class="op">=</span> pd.read_csv(path<span class="op">/</span><span class="st">'test.txt'</span>, sep<span class="op">=</span><span class="st">' '</span>, header<span class="op">=</span><span class="va">None</span>, names<span class="op">=</span>[<span class="st">'fname'</span>, <span class="st">'label'</span>])</span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>flower_categories <span class="op">=</span> <span class="dv">102</span></span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Does the dataset only have 17 categories or all 102?</span></span>
+<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span>(<span class="bu">len</span>(train_df.label.unique()) <span class="op">==</span> flower_categories)</span>
+<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span>(<span class="bu">len</span>(train_df.label.unique()) <span class="op">==</span> <span class="bu">len</span>(valid_df.label.unique()) <span class="op">==</span> <span class="bu">len</span>(test_df.label.unique()))</span>
+<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-11"><a href="#cb11-11" aria-hidden="true" tabindex="-1"></a><span class="co"># Are there the same number of pictures as before?</span></span>
+<span id="cb11-12"><a href="#cb11-12" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span>(<span class="bu">len</span>(train_df) <span class="op">+</span> <span class="bu">len</span>(valid_df) <span class="op">+</span> <span class="bu">len</span>(test_df) <span class="op">==</span> <span class="bu">len</span>(labels))</span>
+<span id="cb11-13"><a href="#cb11-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-14"><a href="#cb11-14" aria-hidden="true" tabindex="-1"></a><span class="co"># If both of these conditions are valid, display the head of the training data</span></span>
+<span id="cb11-15"><a href="#cb11-15" aria-hidden="true" tabindex="-1"></a>train_df.head()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="7">
+<div>
+
+
+<table class="dataframe caption-top table table-sm table-striped small" data-quarto-postprocess="true" data-border="1">
+<thead>
+<tr class="header">
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th">fname</th>
+<th data-quarto-table-cell-role="th">label</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">0</td>
+<td>jpg/image_03860.jpg</td>
+<td>16</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">1</td>
+<td>jpg/image_06092.jpg</td>
+<td>13</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">2</td>
+<td>jpg/image_02400.jpg</td>
+<td>42</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">3</td>
+<td>jpg/image_02852.jpg</td>
+<td>55</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">4</td>
+<td>jpg/image_07710.jpg</td>
+<td>96</td>
+</tr>
+</tbody>
+</table>
+
+</div>
+</div>
+</div>
+<p>Fantastic! The fastai direct download for the flowers dataset actually does contain all 102 categories of images, and has the same number of images as the original link.</p>
+<p>Now we want to load the image data into a fastai structure called dataloaders. Very basically, we do this so that we can associate each image with a label, and so that we can transform the data more easily.</p>
+<div id="cc804c6d-ac9b-45be-bab6-162adaaa87f3" class="cell" data-execution_count="8">
+<div class="sourceCode cell-code" id="cb12"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Add a is_valid column so the dataloaders know which data belongs to the validation set</span></span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>train_df[<span class="st">'is_valid'</span>] <span class="op">=</span> <span class="va">False</span></span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>valid_df[<span class="st">'is_valid'</span>] <span class="op">=</span> <span class="va">True</span></span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a><span class="co">#Ignore_index makes sure that the indices of the valid dataset continue after 1019 to 1020, and don't reset to 0, 1, etc.</span></span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>trn_vld_df <span class="op">=</span> pd.concat([train_df, valid_df], ignore_index<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a>trn_vld_df.head()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="8">
+<div>
+
+
+<table class="dataframe caption-top table table-sm table-striped small" data-quarto-postprocess="true" data-border="1">
+<thead>
+<tr class="header">
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th">fname</th>
+<th data-quarto-table-cell-role="th">label</th>
+<th data-quarto-table-cell-role="th">is_valid</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">0</td>
+<td>jpg/image_03860.jpg</td>
+<td>16</td>
+<td>False</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">1</td>
+<td>jpg/image_06092.jpg</td>
+<td>13</td>
+<td>False</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">2</td>
+<td>jpg/image_02400.jpg</td>
+<td>42</td>
+<td>False</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">3</td>
+<td>jpg/image_02852.jpg</td>
+<td>55</td>
+<td>False</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">4</td>
+<td>jpg/image_07710.jpg</td>
+<td>96</td>
+<td>False</td>
+</tr>
+</tbody>
+</table>
+
+</div>
+</div>
+</div>
+<p>Before actually loading the data into the dataloaders, I want to see if I can get a sense of the sizes of the original images. This will help me understand what transforms to apply.</p>
+<div id="8c7e85e4-2cf7-4d22-bab5-092430195840" class="cell" data-execution_count="9">
+<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>img <span class="op">=</span> PILImage.create(path<span class="op">/</span><span class="st">"jpg/image_03860.jpg"</span>)</span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(img.size)</span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>img.to_thumb(<span class="dv">128</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>(667, 500)</code></pre>
+</div>
+<div class="cell-output cell-output-display" data-execution_count="9">
+<div>
+<figure class="figure">
+<p><img src="Flowers_files/figure-html/cell-11-output-2.png" class="img-fluid figure-img"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>No fun. I’m assuming this means that the image sizes are all over the place. Let’s seee if we can get a good sense of the sizes of our training/validation set</p>
+<div id="7066b7ea-14cb-4741-bfd6-59a658ffce74" class="cell" data-execution_count="10">
+<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> fastcore.parallel <span class="im">import</span> <span class="op">*</span></span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> f(o): <span class="cf">return</span> PILImage.create(path<span class="op">/</span>o).size</span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>trn_vld_df[<span class="st">"dimensions"</span>] <span class="op">=</span> parallel(f, trn_vld_df.fname, n_workers<span class="op">=</span><span class="dv">8</span>)</span>
+<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a>trn_vld_df.head()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="10">
+<div>
+
+
+<table class="dataframe caption-top table table-sm table-striped small" data-quarto-postprocess="true" data-border="1">
+<thead>
+<tr class="header">
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th">fname</th>
+<th data-quarto-table-cell-role="th">label</th>
+<th data-quarto-table-cell-role="th">is_valid</th>
+<th data-quarto-table-cell-role="th">dimensions</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">0</td>
+<td>jpg/image_03860.jpg</td>
+<td>16</td>
+<td>False</td>
+<td>(667, 500)</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">1</td>
+<td>jpg/image_06092.jpg</td>
+<td>13</td>
+<td>False</td>
+<td>(500, 638)</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">2</td>
+<td>jpg/image_02400.jpg</td>
+<td>42</td>
+<td>False</td>
+<td>(500, 667)</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">3</td>
+<td>jpg/image_02852.jpg</td>
+<td>55</td>
+<td>False</td>
+<td>(656, 500)</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">4</td>
+<td>jpg/image_07710.jpg</td>
+<td>96</td>
+<td>False</td>
+<td>(500, 601)</td>
+</tr>
+</tbody>
+</table>
+
+</div>
+</div>
+</div>
+<div id="bca14006-cb8a-4152-be6e-cb1882d9c404" class="cell" data-execution_count="11">
+<div class="sourceCode cell-code" id="cb16"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>dim <span class="op">=</span> trn_vld_df.dimensions[<span class="dv">0</span>]</span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>trn_vld_df[<span class="st">'width'</span>] <span class="op">=</span> trn_vld_df.dimensions.<span class="bu">apply</span>(<span class="kw">lambda</span> x: x[<span class="dv">0</span>])</span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>trn_vld_df[<span class="st">'height'</span>] <span class="op">=</span> trn_vld_df.dimensions.<span class="bu">apply</span>(<span class="kw">lambda</span> x: x[<span class="dv">1</span>])</span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>trn_vld_df.height.describe(), trn_vld_df.width.describe()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="11">
+<pre><code>(count    2040.000000
+ mean      535.593627
+ std        76.971209
+ min       500.000000
+ 25%       500.000000
+ 50%       500.000000
+ 75%       501.000000
+ max      1066.000000
+ Name: height, dtype: float64,
+ count    2040.000000
+ mean      623.470588
+ std        95.725085
+ min       500.000000
+ 25%       500.000000
+ 50%       666.000000
+ 75%       680.000000
+ max       919.000000
+ Name: width, dtype: float64)</code></pre>
+</div>
+</div>
+<p>So I can see the minimum of each dimension is 500 pixels, so I’ll squish the images to be 500x500 at least for now.</p>
+<div id="1dd97fb0-39e4-49cf-8ccb-83b6699e802f" class="cell" data-execution_count="12">
+<div class="sourceCode cell-code" id="cb18"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a>dls <span class="op">=</span> ImageDataLoaders.from_df(</span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>    trn_vld_df,</span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a>    path<span class="op">=</span>path,</span>
+<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a>    folder<span class="op">=</span><span class="st">'.'</span>,</span>
+<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a>    valid_col<span class="op">=</span><span class="st">'is_valid'</span>,</span>
+<span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a>    label_col<span class="op">=</span><span class="st">'label'</span>,</span>
+<span id="cb18-7"><a href="#cb18-7" aria-hidden="true" tabindex="-1"></a>    fn_col<span class="op">=</span><span class="st">'fname'</span>,</span>
+<span id="cb18-8"><a href="#cb18-8" aria-hidden="true" tabindex="-1"></a>    item_tfms<span class="op">=</span>Resize(<span class="dv">500</span>, method<span class="op">=</span><span class="st">"squish"</span>)</span>
+<span id="cb18-9"><a href="#cb18-9" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb18-10"><a href="#cb18-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-11"><a href="#cb18-11" aria-hidden="true" tabindex="-1"></a>dls.show_batch(max_n<span class="op">=</span><span class="dv">6</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="Flowers_files/figure-html/cell-14-output-1.png" class="img-fluid figure-img"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>Looking at this, I’d prefer that these flowers use the actual label names and not just the numbers. I downloaded the mapping from <a href="https://www.kaggle.com/datasets/hobaak/oxford-102-flower-name-index">this kaggle resource</a></p>
+<div id="18c65b14-d70f-48ec-923f-f4736187b4ca" class="cell" data-execution_count="13">
+<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>flower_map <span class="op">=</span> pd.read_csv(path<span class="op">/</span><span class="st">"oxford_flower_102_name.csv"</span>)</span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a>trn_vld_df[<span class="st">'flower_name'</span>] <span class="op">=</span> trn_vld_df[<span class="st">'label'</span>].<span class="bu">apply</span>(<span class="kw">lambda</span> x: flower_map.Name[x])</span>
+<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a>dls <span class="op">=</span> ImageDataLoaders.from_df(</span>
+<span id="cb19-6"><a href="#cb19-6" aria-hidden="true" tabindex="-1"></a>    trn_vld_df,</span>
+<span id="cb19-7"><a href="#cb19-7" aria-hidden="true" tabindex="-1"></a>    path<span class="op">=</span>path,</span>
+<span id="cb19-8"><a href="#cb19-8" aria-hidden="true" tabindex="-1"></a>    folder<span class="op">=</span><span class="st">'.'</span>,</span>
+<span id="cb19-9"><a href="#cb19-9" aria-hidden="true" tabindex="-1"></a>    valid_col<span class="op">=</span><span class="st">'is_valid'</span>,</span>
+<span id="cb19-10"><a href="#cb19-10" aria-hidden="true" tabindex="-1"></a>    label_col<span class="op">=</span><span class="st">'flower_name'</span>,</span>
+<span id="cb19-11"><a href="#cb19-11" aria-hidden="true" tabindex="-1"></a>    fn_col<span class="op">=</span><span class="st">'fname'</span>,</span>
+<span id="cb19-12"><a href="#cb19-12" aria-hidden="true" tabindex="-1"></a>    item_tfms<span class="op">=</span>Resize(<span class="dv">500</span>, method<span class="op">=</span><span class="st">"squish"</span>)</span>
+<span id="cb19-13"><a href="#cb19-13" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb19-14"><a href="#cb19-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-15"><a href="#cb19-15" aria-hidden="true" tabindex="-1"></a>dls.show_batch(max_n<span class="op">=</span><span class="dv">6</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="Flowers_files/figure-html/cell-15-output-1.png" class="img-fluid figure-img"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>I ran the above a few times and checked that the labels lined up. As far as I can tell they do line up, although I’m not a horticulturist. I guess this proves the value of SMEs and domain expertise!</p>
+</section>
+<section id="baseline-the-model" class="level1">
+<h1>Baseline the Model</h1>
+<p>I’ve learned that when working with models like this, we want to get a baseline so we can see how any tinkering to the training improves performance. I’m going to do this as simply as I can, just to get a starting point accuracy value. I’m starting with resnet 26 because it should train a bit faster, which allows me to iterate more quickly. Once I get a sense of some of the best parameters and transforms I’ll run it with the full resnet50</p>
+<div id="56b8f996-b2f3-42ff-bf0f-60e0715436cd" class="cell" data-execution_count="14">
+<div class="sourceCode cell-code" id="cb20"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a>learn <span class="op">=</span> vision_learner(dls, <span class="st">'resnet26d'</span>, metrics<span class="op">=</span>error_rate, path<span class="op">=</span><span class="st">'.'</span>).to_fp16()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div id="ae28ee4f-2e50-4778-8fd2-9908a12d92f3" class="cell" data-execution_count="15">
+<div class="sourceCode cell-code" id="cb21"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>learn.lr_find(suggest_funcs<span class="op">=</span>(valley, slide))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display">
+
+<style>
+    /* Turns off some styling */
+    progress {
+        /* gets rid of default border in Firefox and Opera. */
+        border: none;
+        /* Needs to be in here for Safari polyfill so background images work as expected. */
+        background-size: auto;
+    }
+    progress:not([value]), progress:not([value])::-webkit-progress-bar {
+        background: repeating-linear-gradient(45deg, #7e7e7e, #7e7e7e 10px, #5c5c5c 10px, #5c5c5c 20px);
+    }
+    .progress-bar-interrupted, .progress-bar-interrupted::-webkit-progress-bar {
+        background: #F44336;
+    }
+</style>
+</div>
+<div class="cell-output cell-output-display">
+
+</div>
+<div class="cell-output cell-output-display" data-execution_count="15">
+<pre><code>SuggestedLRs(valley=0.0014454397605732083, slide=0.002511886414140463)</code></pre>
+</div>
+<div class="cell-output cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="Flowers_files/figure-html/cell-17-output-4.png" class="img-fluid figure-img"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>It looks like the slope of the learning rate graph is steepest around .01, so I’ll try that for my first learning rate. I should also mention I’m doing this on my personal machine with a 3090, so I have to be extra careful about VRAM usage. I’ll save the learner as a pkl file so I can keep track of my models without holding them all in memory.</p>
+<div id="dfb79f2a-0621-427f-853a-d2c2bba9b66f" class="cell" data-execution_count="16">
+<div class="sourceCode cell-code" id="cb23"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a>learn.fine_tune(<span class="dv">4</span>, <span class="fl">0.01</span>)</span>
+<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a>learn.export(<span class="st">"flowers_baseline.pkl"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display">
+
+<style>
+    /* Turns off some styling */
+    progress {
+        /* gets rid of default border in Firefox and Opera. */
+        border: none;
+        /* Needs to be in here for Safari polyfill so background images work as expected. */
+        background-size: auto;
+    }
+    progress:not([value]), progress:not([value])::-webkit-progress-bar {
+        background: repeating-linear-gradient(45deg, #7e7e7e, #7e7e7e 10px, #5c5c5c 10px, #5c5c5c 20px);
+    }
+    .progress-bar-interrupted, .progress-bar-interrupted::-webkit-progress-bar {
+        background: #F44336;
+    }
+</style>
+</div>
+<div class="cell-output cell-output-display">
+<table class="dataframe caption-top table table-sm table-striped small" data-quarto-postprocess="true" data-border="1">
+<thead>
+<tr class="header">
+<th data-quarto-table-cell-role="th">epoch</th>
+<th data-quarto-table-cell-role="th">train_loss</th>
+<th data-quarto-table-cell-role="th">valid_loss</th>
+<th data-quarto-table-cell-role="th">error_rate</th>
+<th data-quarto-table-cell-role="th">time</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>0</td>
+<td>4.356567</td>
+<td>2.474855</td>
+<td>0.564706</td>
+<td>00:08</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="cell-output cell-output-display">
+
+<style>
+    /* Turns off some styling */
+    progress {
+        /* gets rid of default border in Firefox and Opera. */
+        border: none;
+        /* Needs to be in here for Safari polyfill so background images work as expected. */
+        background-size: auto;
+    }
+    progress:not([value]), progress:not([value])::-webkit-progress-bar {
+        background: repeating-linear-gradient(45deg, #7e7e7e, #7e7e7e 10px, #5c5c5c 10px, #5c5c5c 20px);
+    }
+    .progress-bar-interrupted, .progress-bar-interrupted::-webkit-progress-bar {
+        background: #F44336;
+    }
+</style>
+</div>
+<div class="cell-output cell-output-display">
+<table class="dataframe caption-top table table-sm table-striped small" data-quarto-postprocess="true" data-border="1">
+<thead>
+<tr class="header">
+<th data-quarto-table-cell-role="th">epoch</th>
+<th data-quarto-table-cell-role="th">train_loss</th>
+<th data-quarto-table-cell-role="th">valid_loss</th>
+<th data-quarto-table-cell-role="th">error_rate</th>
+<th data-quarto-table-cell-role="th">time</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>0</td>
+<td>0.922473</td>
+<td>1.532441</td>
+<td>0.380392</td>
+<td>00:09</td>
+</tr>
+<tr class="even">
+<td>1</td>
+<td>0.727341</td>
+<td>1.072898</td>
+<td>0.261765</td>
+<td>00:09</td>
+</tr>
+<tr class="odd">
+<td>2</td>
+<td>0.484771</td>
+<td>0.996256</td>
+<td>0.253922</td>
+<td>00:09</td>
+</tr>
+<tr class="even">
+<td>3</td>
+<td>0.336363</td>
+<td>0.990108</td>
+<td>0.243137</td>
+<td>00:09</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<p>Not great, but decent for a first attempt. Seems like we can only predict around 75% of the images correctly. Let’s determine our actual performance rate on the test set now.</p>
+<p>typically I wouldn’t jump directly to the test set, and I’d play around more with the training and validation sets. At this point, I’m using the test set in the same way I would use submitting to the kaggle leaderboard. It will give me a baseline and help me know if I start getting off track later on.</p>
+<div id="c4fa7d02-2465-4347-b8a5-3af0cbc82d4f" class="cell" data-execution_count="17">
+<div class="sourceCode cell-code" id="cb24"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a>test_df[<span class="st">'flower_name'</span>] <span class="op">=</span> test_df[<span class="st">'label'</span>].<span class="bu">apply</span>(<span class="kw">lambda</span> x: flower_map.Name[x])</span>
+<span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a>test_dl <span class="op">=</span> dls.test_dl(test_df, with_labels<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb24-3"><a href="#cb24-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-4"><a href="#cb24-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Now validate</span></span>
+<span id="cb24-5"><a href="#cb24-5" aria-hidden="true" tabindex="-1"></a>loss, <span class="op">*</span>metrics <span class="op">=</span> learn.validate(dl<span class="op">=</span>test_dl)</span>
+<span id="cb24-6"><a href="#cb24-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-7"><a href="#cb24-7" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Test loss: </span><span class="sc">{</span>loss<span class="sc">:.3f}</span><span class="ss">"</span>)</span>
+<span id="cb24-8"><a href="#cb24-8" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Test error rate: </span><span class="sc">{</span>metrics[<span class="dv">0</span>]<span class="sc">:.3f}</span><span class="ss">"</span>)</span>
+<span id="cb24-9"><a href="#cb24-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-10"><a href="#cb24-10" aria-hidden="true" tabindex="-1"></a>test_dl.show_batch(max_n<span class="op">=</span><span class="dv">6</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display">
+
+<style>
+    /* Turns off some styling */
+    progress {
+        /* gets rid of default border in Firefox and Opera. */
+        border: none;
+        /* Needs to be in here for Safari polyfill so background images work as expected. */
+        background-size: auto;
+    }
+    progress:not([value]), progress:not([value])::-webkit-progress-bar {
+        background: repeating-linear-gradient(45deg, #7e7e7e, #7e7e7e 10px, #5c5c5c 10px, #5c5c5c 20px);
+    }
+    .progress-bar-interrupted, .progress-bar-interrupted::-webkit-progress-bar {
+        background: #F44336;
+    }
+</style>
+</div>
+<div class="cell-output cell-output-display">
+
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Test loss: 1.097
+Test error rate: 0.270</code></pre>
+</div>
+<div class="cell-output cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="Flowers_files/figure-html/cell-19-output-4.png" class="img-fluid figure-img"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>Ok great. That result makes sense. When we applied our learner to the test dataset we got a result that was slightly worse. Of course we did. The test set has around 6k images, whereas our training set only has around 1k. The rest of this notebook will be dedicated to improving our baseline metrics. But first, I’ll just wrap the above code into a function to make verification easier.</p>
+<div id="35776b14-73af-4221-86b1-4fea61fb20c2" class="cell" data-execution_count="18">
+<div class="sourceCode cell-code" id="cb26"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> torch</span>
+<span id="cb26-2"><a href="#cb26-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-3"><a href="#cb26-3" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> verify_learner(learner):</span>
+<span id="cb26-4"><a href="#cb26-4" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Now validate</span></span>
+<span id="cb26-5"><a href="#cb26-5" aria-hidden="true" tabindex="-1"></a>    loss, <span class="op">*</span>metrics <span class="op">=</span> learner.validate(dl<span class="op">=</span>test_dl)</span>
+<span id="cb26-6"><a href="#cb26-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-7"><a href="#cb26-7" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f"Test loss: </span><span class="sc">{</span>loss<span class="sc">:.3f}</span><span class="ss">"</span>)</span>
+<span id="cb26-8"><a href="#cb26-8" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f"Test error rate: </span><span class="sc">{</span>metrics[<span class="dv">0</span>]<span class="sc">:.3f}</span><span class="ss">"</span>)</span>
+<span id="cb26-9"><a href="#cb26-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-10"><a href="#cb26-10" aria-hidden="true" tabindex="-1"></a><span class="kw">del</span> learn</span>
+<span id="cb26-11"><a href="#cb26-11" aria-hidden="true" tabindex="-1"></a>torch.cuda.empty_cache()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+<section id="optimizing-the-model" class="level1">
+<h1>Optimizing the Model</h1>
+<p>I am pretty much going to run through a subset of the data optimizations in the notebook I linked above</p>
+<p>I guess I’ll try making the images smaller to see if I can make the training loop faster. This should get us to a faster training time and not impact the accuracy too much. We just want to get in the ballpark of our accuracy from our last training so we can iterate more quickly.</p>
+<div id="473ba5da-7b42-4b9a-ac2e-80a631364e5d" class="cell" data-execution_count="20">
+<div class="sourceCode cell-code" id="cb27"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a>small_pth <span class="op">=</span> path<span class="op">/</span><span class="st">"smaller"</span><span class="op">/</span><span class="st">"jpg"</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div id="04251117-dab5-47f6-ba2c-85301a876912" class="cell" data-execution_count="21">
+<div class="sourceCode cell-code" id="cb28"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a>resize_images(path<span class="op">/</span><span class="st">'jpg'</span>, dest<span class="op">=</span>small_pth, max_size<span class="op">=</span><span class="dv">256</span>, recurse<span class="op">=</span><span class="va">True</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div id="7561bb1b-b8e9-4809-8329-cfab8d973e1e" class="cell" data-execution_count="22">
+<div class="sourceCode cell-code" id="cb29"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> train(arch, item, batch, epochs<span class="op">=</span><span class="dv">5</span>, folder <span class="op">=</span> <span class="st">''</span>):</span>
+<span id="cb29-2"><a href="#cb29-2" aria-hidden="true" tabindex="-1"></a>    lr <span class="op">=</span> <span class="fl">0.01</span></span>
+<span id="cb29-3"><a href="#cb29-3" aria-hidden="true" tabindex="-1"></a>    dls <span class="op">=</span> ImageDataLoaders.from_df(</span>
+<span id="cb29-4"><a href="#cb29-4" aria-hidden="true" tabindex="-1"></a>        trn_vld_df,</span>
+<span id="cb29-5"><a href="#cb29-5" aria-hidden="true" tabindex="-1"></a>        path<span class="op">=</span>path,</span>
+<span id="cb29-6"><a href="#cb29-6" aria-hidden="true" tabindex="-1"></a>        folder<span class="op">=</span><span class="st">'.'</span> <span class="op">+</span> folder,</span>
+<span id="cb29-7"><a href="#cb29-7" aria-hidden="true" tabindex="-1"></a>        valid_col<span class="op">=</span><span class="st">'is_valid'</span>,</span>
+<span id="cb29-8"><a href="#cb29-8" aria-hidden="true" tabindex="-1"></a>        label_col<span class="op">=</span><span class="st">'flower_name'</span>,</span>
+<span id="cb29-9"><a href="#cb29-9" aria-hidden="true" tabindex="-1"></a>        fn_col<span class="op">=</span><span class="st">'fname'</span>,</span>
+<span id="cb29-10"><a href="#cb29-10" aria-hidden="true" tabindex="-1"></a>        item_tfms<span class="op">=</span>item,</span>
+<span id="cb29-11"><a href="#cb29-11" aria-hidden="true" tabindex="-1"></a>        batch_tfms<span class="op">=</span>batch</span>
+<span id="cb29-12"><a href="#cb29-12" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb29-13"><a href="#cb29-13" aria-hidden="true" tabindex="-1"></a>    dls.show_batch(max_n<span class="op">=</span><span class="dv">3</span>)</span>
+<span id="cb29-14"><a href="#cb29-14" aria-hidden="true" tabindex="-1"></a>    learn <span class="op">=</span> vision_learner(dls, arch, metrics<span class="op">=</span>error_rate).to_fp16()</span>
+<span id="cb29-15"><a href="#cb29-15" aria-hidden="true" tabindex="-1"></a>    learn.fine_tune(epochs, lr)</span>
+<span id="cb29-16"><a href="#cb29-16" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> learn</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div id="b466b194-e7fe-4215-af2d-dd0565024bdd" class="cell" data-execution_count="23">
+<div class="sourceCode cell-code" id="cb30"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a>learn <span class="op">=</span> train(<span class="st">'resnet26d'</span>, item<span class="op">=</span>Resize(<span class="dv">192</span>, method<span class="op">=</span><span class="st">"squish"</span>),</span>
+<span id="cb30-2"><a href="#cb30-2" aria-hidden="true" tabindex="-1"></a>              batch<span class="op">=</span>aug_transforms(size<span class="op">=</span><span class="dv">128</span>, min_scale<span class="op">=</span><span class="fl">0.75</span>), folder<span class="op">=</span><span class="st">"/smaller"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display">
+
+<style>
+    /* Turns off some styling */
+    progress {
+        /* gets rid of default border in Firefox and Opera. */
+        border: none;
+        /* Needs to be in here for Safari polyfill so background images work as expected. */
+        background-size: auto;
+    }
+    progress:not([value]), progress:not([value])::-webkit-progress-bar {
+        background: repeating-linear-gradient(45deg, #7e7e7e, #7e7e7e 10px, #5c5c5c 10px, #5c5c5c 20px);
+    }
+    .progress-bar-interrupted, .progress-bar-interrupted::-webkit-progress-bar {
+        background: #F44336;
+    }
+</style>
+</div>
+<div class="cell-output cell-output-display">
+<table class="dataframe caption-top table table-sm table-striped small" data-quarto-postprocess="true" data-border="1">
+<thead>
+<tr class="header">
+<th data-quarto-table-cell-role="th">epoch</th>
+<th data-quarto-table-cell-role="th">train_loss</th>
+<th data-quarto-table-cell-role="th">valid_loss</th>
+<th data-quarto-table-cell-role="th">error_rate</th>
+<th data-quarto-table-cell-role="th">time</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>0</td>
+<td>4.618897</td>
+<td>2.725442</td>
+<td>0.491176</td>
+<td>00:02</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="cell-output cell-output-display">
+
+<style>
+    /* Turns off some styling */
+    progress {
+        /* gets rid of default border in Firefox and Opera. */
+        border: none;
+        /* Needs to be in here for Safari polyfill so background images work as expected. */
+        background-size: auto;
+    }
+    progress:not([value]), progress:not([value])::-webkit-progress-bar {
+        background: repeating-linear-gradient(45deg, #7e7e7e, #7e7e7e 10px, #5c5c5c 10px, #5c5c5c 20px);
+    }
+    .progress-bar-interrupted, .progress-bar-interrupted::-webkit-progress-bar {
+        background: #F44336;
+    }
+</style>
+</div>
+<div class="cell-output cell-output-display">
+<table class="dataframe caption-top table table-sm table-striped small" data-quarto-postprocess="true" data-border="1">
+<thead>
+<tr class="header">
+<th data-quarto-table-cell-role="th">epoch</th>
+<th data-quarto-table-cell-role="th">train_loss</th>
+<th data-quarto-table-cell-role="th">valid_loss</th>
+<th data-quarto-table-cell-role="th">error_rate</th>
+<th data-quarto-table-cell-role="th">time</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>0</td>
+<td>1.607633</td>
+<td>1.553987</td>
+<td>0.378431</td>
+<td>00:02</td>
+</tr>
+<tr class="even">
+<td>1</td>
+<td>1.386632</td>
+<td>1.469676</td>
+<td>0.359804</td>
+<td>00:02</td>
+</tr>
+<tr class="odd">
+<td>2</td>
+<td>1.071519</td>
+<td>1.385503</td>
+<td>0.327451</td>
+<td>00:02</td>
+</tr>
+<tr class="even">
+<td>3</td>
+<td>0.823332</td>
+<td>1.307878</td>
+<td>0.314706</td>
+<td>00:02</td>
+</tr>
+<tr class="odd">
+<td>4</td>
+<td>0.658670</td>
+<td>1.292491</td>
+<td>0.309804</td>
+<td>00:02</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="cell-output cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="Flowers_files/figure-html/cell-24-output-5.png" class="img-fluid figure-img"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>Ok perfect, around what what we got last time.</p>
+<section id="effect-of-image-transforms" class="level2">
+<h2 class="anchored" data-anchor-id="effect-of-image-transforms">Effect of Image Transforms</h2>
+<p>Now I want to see what happens if I change the image pre-processing. We first “squished” the images, now we’ll see how cropping them and padding them affects the results.</p>
+<div id="613e9547-ca40-4f64-bbd8-e85753b09cbe" class="cell" data-execution_count="24">
+<div class="sourceCode cell-code" id="cb31"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Crop results</span></span>
+<span id="cb31-2"><a href="#cb31-2" aria-hidden="true" tabindex="-1"></a>learn <span class="op">=</span> train(<span class="st">'resnet26d'</span>, item<span class="op">=</span>Resize(<span class="dv">192</span>),</span>
+<span id="cb31-3"><a href="#cb31-3" aria-hidden="true" tabindex="-1"></a>              batch<span class="op">=</span>aug_transforms(size<span class="op">=</span><span class="dv">128</span>, min_scale<span class="op">=</span><span class="fl">0.75</span>), folder<span class="op">=</span><span class="st">"/smaller"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display">
+
+<style>
+    /* Turns off some styling */
+    progress {
+        /* gets rid of default border in Firefox and Opera. */
+        border: none;
+        /* Needs to be in here for Safari polyfill so background images work as expected. */
+        background-size: auto;
+    }
+    progress:not([value]), progress:not([value])::-webkit-progress-bar {
+        background: repeating-linear-gradient(45deg, #7e7e7e, #7e7e7e 10px, #5c5c5c 10px, #5c5c5c 20px);
+    }
+    .progress-bar-interrupted, .progress-bar-interrupted::-webkit-progress-bar {
+        background: #F44336;
+    }
+</style>
+</div>
+<div class="cell-output cell-output-display">
+<table class="dataframe caption-top table table-sm table-striped small" data-quarto-postprocess="true" data-border="1">
+<thead>
+<tr class="header">
+<th data-quarto-table-cell-role="th">epoch</th>
+<th data-quarto-table-cell-role="th">train_loss</th>
+<th data-quarto-table-cell-role="th">valid_loss</th>
+<th data-quarto-table-cell-role="th">error_rate</th>
+<th data-quarto-table-cell-role="th">time</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>0</td>
+<td>4.369109</td>
+<td>2.711665</td>
+<td>0.475490</td>
+<td>00:02</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="cell-output cell-output-display">
+
+<style>
+    /* Turns off some styling */
+    progress {
+        /* gets rid of default border in Firefox and Opera. */
+        border: none;
+        /* Needs to be in here for Safari polyfill so background images work as expected. */
+        background-size: auto;
+    }
+    progress:not([value]), progress:not([value])::-webkit-progress-bar {
+        background: repeating-linear-gradient(45deg, #7e7e7e, #7e7e7e 10px, #5c5c5c 10px, #5c5c5c 20px);
+    }
+    .progress-bar-interrupted, .progress-bar-interrupted::-webkit-progress-bar {
+        background: #F44336;
+    }
+</style>
+</div>
+<div class="cell-output cell-output-display">
+<table class="dataframe caption-top table table-sm table-striped small" data-quarto-postprocess="true" data-border="1">
+<thead>
+<tr class="header">
+<th data-quarto-table-cell-role="th">epoch</th>
+<th data-quarto-table-cell-role="th">train_loss</th>
+<th data-quarto-table-cell-role="th">valid_loss</th>
+<th data-quarto-table-cell-role="th">error_rate</th>
+<th data-quarto-table-cell-role="th">time</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>0</td>
+<td>1.494434</td>
+<td>1.471795</td>
+<td>0.369608</td>
+<td>00:02</td>
+</tr>
+<tr class="even">
+<td>1</td>
+<td>1.330196</td>
+<td>1.422566</td>
+<td>0.329412</td>
+<td>00:02</td>
+</tr>
+<tr class="odd">
+<td>2</td>
+<td>1.054390</td>
+<td>1.319151</td>
+<td>0.317647</td>
+<td>00:02</td>
+</tr>
+<tr class="even">
+<td>3</td>
+<td>0.833957</td>
+<td>1.227265</td>
+<td>0.292157</td>
+<td>00:02</td>
+</tr>
+<tr class="odd">
+<td>4</td>
+<td>0.668740</td>
+<td>1.183494</td>
+<td>0.290196</td>
+<td>00:02</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="cell-output cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="Flowers_files/figure-html/cell-25-output-5.png" class="img-fluid figure-img"></p>
+</figure>
+</div>
+</div>
+</div>
+<div id="f5c7c5aa-5f98-4f4c-b971-c4ed9a1b96c3" class="cell" data-execution_count="25">
+<div class="sourceCode cell-code" id="cb32"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Pad results</span></span>
+<span id="cb32-2"><a href="#cb32-2" aria-hidden="true" tabindex="-1"></a>learn <span class="op">=</span> train(<span class="st">'resnet26d'</span>, item<span class="op">=</span>Resize((<span class="dv">256</span>,<span class="dv">192</span>), method<span class="op">=</span>ResizeMethod.Pad, pad_mode<span class="op">=</span>PadMode.Zeros),</span>
+<span id="cb32-3"><a href="#cb32-3" aria-hidden="true" tabindex="-1"></a>      batch<span class="op">=</span>aug_transforms(size<span class="op">=</span>(<span class="dv">171</span>,<span class="dv">128</span>), min_scale<span class="op">=</span><span class="fl">0.75</span>), folder <span class="op">=</span> <span class="st">"/smaller"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display">
+
+<style>
+    /* Turns off some styling */
+    progress {
+        /* gets rid of default border in Firefox and Opera. */
+        border: none;
+        /* Needs to be in here for Safari polyfill so background images work as expected. */
+        background-size: auto;
+    }
+    progress:not([value]), progress:not([value])::-webkit-progress-bar {
+        background: repeating-linear-gradient(45deg, #7e7e7e, #7e7e7e 10px, #5c5c5c 10px, #5c5c5c 20px);
+    }
+    .progress-bar-interrupted, .progress-bar-interrupted::-webkit-progress-bar {
+        background: #F44336;
+    }
+</style>
+</div>
+<div class="cell-output cell-output-display">
+<table class="dataframe caption-top table table-sm table-striped small" data-quarto-postprocess="true" data-border="1">
+<thead>
+<tr class="header">
+<th data-quarto-table-cell-role="th">epoch</th>
+<th data-quarto-table-cell-role="th">train_loss</th>
+<th data-quarto-table-cell-role="th">valid_loss</th>
+<th data-quarto-table-cell-role="th">error_rate</th>
+<th data-quarto-table-cell-role="th">time</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>0</td>
+<td>4.652976</td>
+<td>2.947920</td>
+<td>0.556863</td>
+<td>00:02</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="cell-output cell-output-display">
+
+<style>
+    /* Turns off some styling */
+    progress {
+        /* gets rid of default border in Firefox and Opera. */
+        border: none;
+        /* Needs to be in here for Safari polyfill so background images work as expected. */
+        background-size: auto;
+    }
+    progress:not([value]), progress:not([value])::-webkit-progress-bar {
+        background: repeating-linear-gradient(45deg, #7e7e7e, #7e7e7e 10px, #5c5c5c 10px, #5c5c5c 20px);
+    }
+    .progress-bar-interrupted, .progress-bar-interrupted::-webkit-progress-bar {
+        background: #F44336;
+    }
+</style>
+</div>
+<div class="cell-output cell-output-display">
+<table class="dataframe caption-top table table-sm table-striped small" data-quarto-postprocess="true" data-border="1">
+<thead>
+<tr class="header">
+<th data-quarto-table-cell-role="th">epoch</th>
+<th data-quarto-table-cell-role="th">train_loss</th>
+<th data-quarto-table-cell-role="th">valid_loss</th>
+<th data-quarto-table-cell-role="th">error_rate</th>
+<th data-quarto-table-cell-role="th">time</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>0</td>
+<td>1.831202</td>
+<td>1.742645</td>
+<td>0.403922</td>
+<td>00:02</td>
+</tr>
+<tr class="even">
+<td>1</td>
+<td>1.585920</td>
+<td>1.497415</td>
+<td>0.354902</td>
+<td>00:02</td>
+</tr>
+<tr class="odd">
+<td>2</td>
+<td>1.272542</td>
+<td>1.304852</td>
+<td>0.307843</td>
+<td>00:02</td>
+</tr>
+<tr class="even">
+<td>3</td>
+<td>0.995634</td>
+<td>1.165755</td>
+<td>0.278431</td>
+<td>00:02</td>
+</tr>
+<tr class="odd">
+<td>4</td>
+<td>0.790987</td>
+<td>1.140745</td>
+<td>0.282353</td>
+<td>00:02</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="cell-output cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="Flowers_files/figure-html/cell-26-output-5.png" class="img-fluid figure-img"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>So our best performance comes from the padding method. We’ll keep that for our final model.</p>
+</section>
+<section id="experimenting-with-test-time-augmentation" class="level2">
+<h2 class="anchored" data-anchor-id="experimenting-with-test-time-augmentation">Experimenting with Test Time Augmentation</h2>
+<div id="83fe9a57-1a5c-496a-b4a8-229de4481b2c" class="cell" data-execution_count="26">
+<div class="sourceCode cell-code" id="cb33"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a>valid <span class="op">=</span> learn.dls.valid</span>
+<span id="cb33-2"><a href="#cb33-2" aria-hidden="true" tabindex="-1"></a>preds,targs <span class="op">=</span> learn.get_preds(dl<span class="op">=</span>valid)</span>
+<span id="cb33-3"><a href="#cb33-3" aria-hidden="true" tabindex="-1"></a>error_rate(preds, targs)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display">
+
+<style>
+    /* Turns off some styling */
+    progress {
+        /* gets rid of default border in Firefox and Opera. */
+        border: none;
+        /* Needs to be in here for Safari polyfill so background images work as expected. */
+        background-size: auto;
+    }
+    progress:not([value]), progress:not([value])::-webkit-progress-bar {
+        background: repeating-linear-gradient(45deg, #7e7e7e, #7e7e7e 10px, #5c5c5c 10px, #5c5c5c 20px);
+    }
+    .progress-bar-interrupted, .progress-bar-interrupted::-webkit-progress-bar {
+        background: #F44336;
+    }
+</style>
+</div>
+<div class="cell-output cell-output-display">
+
+</div>
+<div class="cell-output cell-output-display" data-execution_count="26">
+<pre><code>TensorBase(0.2824)</code></pre>
+</div>
+</div>
+<p>We want to show that we can use the above code to get the error rate. We then can use test time augmentation to get the average of the predictions of each of the augmented images and the original image itself. This lets us leverage all of the augmented images into more accurate predictions</p>
+<div id="b484acc8-c5b9-4648-9f12-6b66609345b7" class="cell" data-execution_count="27">
+<div class="sourceCode cell-code" id="cb35"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb35-1"><a href="#cb35-1" aria-hidden="true" tabindex="-1"></a><span class="co">#learn.dls.train.show_batch(max_n=6, unique=True)</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div id="54d814f1-1afb-44aa-ab71-3ec285007bd1" class="cell" data-execution_count="28">
+<div class="sourceCode cell-code" id="cb36"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb36-1"><a href="#cb36-1" aria-hidden="true" tabindex="-1"></a>tta_preds,_ <span class="op">=</span> learn.tta(dl<span class="op">=</span>valid)</span>
+<span id="cb36-2"><a href="#cb36-2" aria-hidden="true" tabindex="-1"></a>error_rate(tta_preds, targs)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display">
+
+<style>
+    /* Turns off some styling */
+    progress {
+        /* gets rid of default border in Firefox and Opera. */
+        border: none;
+        /* Needs to be in here for Safari polyfill so background images work as expected. */
+        background-size: auto;
+    }
+    progress:not([value]), progress:not([value])::-webkit-progress-bar {
+        background: repeating-linear-gradient(45deg, #7e7e7e, #7e7e7e 10px, #5c5c5c 10px, #5c5c5c 20px);
+    }
+    .progress-bar-interrupted, .progress-bar-interrupted::-webkit-progress-bar {
+        background: #F44336;
+    }
+</style>
+</div>
+<div class="cell-output cell-output-display">
+
+    <div>
+      <progress value="0" class="" max="5" style="width:300px; height:20px; vertical-align: middle;"></progress>
+      
+    </div>
+    
+</div>
+<div class="cell-output cell-output-display">
+
+<style>
+    /* Turns off some styling */
+    progress {
+        /* gets rid of default border in Firefox and Opera. */
+        border: none;
+        /* Needs to be in here for Safari polyfill so background images work as expected. */
+        background-size: auto;
+    }
+    progress:not([value]), progress:not([value])::-webkit-progress-bar {
+        background: repeating-linear-gradient(45deg, #7e7e7e, #7e7e7e 10px, #5c5c5c 10px, #5c5c5c 20px);
+    }
+    .progress-bar-interrupted, .progress-bar-interrupted::-webkit-progress-bar {
+        background: #F44336;
+    }
+</style>
+</div>
+<div class="cell-output cell-output-display">
+
+</div>
+<div class="cell-output cell-output-display" data-execution_count="28">
+<pre><code>TensorBase(0.2431)</code></pre>
+</div>
+</div>
+</section>
+</section>
+<section id="final-model" class="level1">
+<h1>Final Model</h1>
+<p>To recap. After loading our data into python, we split it into train/validation/test sets. Then we got a baseline to see where we were starting from and to make sure all of our code so far was in line. We then experimented with a few types of image transforms and test time augmentation. To give us more time, we resized the original image set and used the shrunken images.</p>
+<p>We now want to apply what we’ve learned to our final model. We want to go back to our original-sized images, use the padding transform, apply TTA, and use the requested model (resnet50). We’ll also add a few more epochs to our training for good measure now that we have a sense of what transforms are most effective.</p>
+<div id="38a40b07-4bee-4398-b6bb-3f37c9f5614e" class="cell" data-execution_count="29">
+<div class="sourceCode cell-code" id="cb38"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb38-1"><a href="#cb38-1" aria-hidden="true" tabindex="-1"></a>learn <span class="op">=</span> train(<span class="st">"resnet50"</span>, epochs<span class="op">=</span><span class="dv">12</span>,</span>
+<span id="cb38-2"><a href="#cb38-2" aria-hidden="true" tabindex="-1"></a>              item<span class="op">=</span>Resize((<span class="dv">500</span>), method<span class="op">=</span>ResizeMethod.Pad, pad_mode<span class="op">=</span>PadMode.Zeros),</span>
+<span id="cb38-3"><a href="#cb38-3" aria-hidden="true" tabindex="-1"></a>              batch<span class="op">=</span>aug_transforms(size<span class="op">=</span>(<span class="dv">256</span>,<span class="dv">192</span>), min_scale<span class="op">=</span><span class="fl">0.75</span>))</span>
+<span id="cb38-4"><a href="#cb38-4" aria-hidden="true" tabindex="-1"></a>learn.export(<span class="st">"flower_final.pkl"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display">
+
+<style>
+    /* Turns off some styling */
+    progress {
+        /* gets rid of default border in Firefox and Opera. */
+        border: none;
+        /* Needs to be in here for Safari polyfill so background images work as expected. */
+        background-size: auto;
+    }
+    progress:not([value]), progress:not([value])::-webkit-progress-bar {
+        background: repeating-linear-gradient(45deg, #7e7e7e, #7e7e7e 10px, #5c5c5c 10px, #5c5c5c 20px);
+    }
+    .progress-bar-interrupted, .progress-bar-interrupted::-webkit-progress-bar {
+        background: #F44336;
+    }
+</style>
+</div>
+<div class="cell-output cell-output-display">
+<table class="dataframe caption-top table table-sm table-striped small" data-quarto-postprocess="true" data-border="1">
+<thead>
+<tr class="header">
+<th data-quarto-table-cell-role="th">epoch</th>
+<th data-quarto-table-cell-role="th">train_loss</th>
+<th data-quarto-table-cell-role="th">valid_loss</th>
+<th data-quarto-table-cell-role="th">error_rate</th>
+<th data-quarto-table-cell-role="th">time</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>0</td>
+<td>4.892752</td>
+<td>2.657414</td>
+<td>0.625490</td>
+<td>00:05</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="cell-output cell-output-display">
+
+<style>
+    /* Turns off some styling */
+    progress {
+        /* gets rid of default border in Firefox and Opera. */
+        border: none;
+        /* Needs to be in here for Safari polyfill so background images work as expected. */
+        background-size: auto;
+    }
+    progress:not([value]), progress:not([value])::-webkit-progress-bar {
+        background: repeating-linear-gradient(45deg, #7e7e7e, #7e7e7e 10px, #5c5c5c 10px, #5c5c5c 20px);
+    }
+    .progress-bar-interrupted, .progress-bar-interrupted::-webkit-progress-bar {
+        background: #F44336;
+    }
+</style>
+</div>
+<div class="cell-output cell-output-display">
+<table class="dataframe caption-top table table-sm table-striped small" data-quarto-postprocess="true" data-border="1">
+<thead>
+<tr class="header">
+<th data-quarto-table-cell-role="th">epoch</th>
+<th data-quarto-table-cell-role="th">train_loss</th>
+<th data-quarto-table-cell-role="th">valid_loss</th>
+<th data-quarto-table-cell-role="th">error_rate</th>
+<th data-quarto-table-cell-role="th">time</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>0</td>
+<td>1.828908</td>
+<td>2.204603</td>
+<td>0.490196</td>
+<td>00:05</td>
+</tr>
+<tr class="even">
+<td>1</td>
+<td>1.463666</td>
+<td>1.521940</td>
+<td>0.367647</td>
+<td>00:05</td>
+</tr>
+<tr class="odd">
+<td>2</td>
+<td>1.162235</td>
+<td>1.265880</td>
+<td>0.321569</td>
+<td>00:05</td>
+</tr>
+<tr class="even">
+<td>3</td>
+<td>0.963719</td>
+<td>1.215181</td>
+<td>0.313726</td>
+<td>00:06</td>
+</tr>
+<tr class="odd">
+<td>4</td>
+<td>0.788255</td>
+<td>1.186825</td>
+<td>0.282353</td>
+<td>00:05</td>
+</tr>
+<tr class="even">
+<td>5</td>
+<td>0.645374</td>
+<td>1.123951</td>
+<td>0.266667</td>
+<td>00:05</td>
+</tr>
+<tr class="odd">
+<td>6</td>
+<td>0.514764</td>
+<td>0.984290</td>
+<td>0.247059</td>
+<td>00:05</td>
+</tr>
+<tr class="even">
+<td>7</td>
+<td>0.408206</td>
+<td>0.989627</td>
+<td>0.239216</td>
+<td>00:05</td>
+</tr>
+<tr class="odd">
+<td>8</td>
+<td>0.331815</td>
+<td>0.921819</td>
+<td>0.231373</td>
+<td>00:05</td>
+</tr>
+<tr class="even">
+<td>9</td>
+<td>0.280903</td>
+<td>0.881507</td>
+<td>0.228431</td>
+<td>00:05</td>
+</tr>
+<tr class="odd">
+<td>10</td>
+<td>0.236677</td>
+<td>0.899625</td>
+<td>0.224510</td>
+<td>00:05</td>
+</tr>
+<tr class="even">
+<td>11</td>
+<td>0.205966</td>
+<td>0.924724</td>
+<td>0.224510</td>
+<td>00:05</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="cell-output cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="Flowers_files/figure-html/cell-30-output-5.png" class="img-fluid figure-img"></p>
+</figure>
+</div>
+</div>
+</div>
+<div id="99cba66f-d80a-4fa8-ac1c-1150741a90fb" class="cell" data-execution_count="30">
+<div class="sourceCode cell-code" id="cb39"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb39-1"><a href="#cb39-1" aria-hidden="true" tabindex="-1"></a>test_dl <span class="op">=</span> learn.dls.test_dl(test_df, with_labels<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb39-2"><a href="#cb39-2" aria-hidden="true" tabindex="-1"></a>tta_preds, targs <span class="op">=</span> learn.tta(dl<span class="op">=</span>test_dl)</span>
+<span id="cb39-3"><a href="#cb39-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb39-4"><a href="#cb39-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Now validate</span></span>
+<span id="cb39-5"><a href="#cb39-5" aria-hidden="true" tabindex="-1"></a>err <span class="op">=</span> error_rate(tta_preds, targs)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display">
+
+<style>
+    /* Turns off some styling */
+    progress {
+        /* gets rid of default border in Firefox and Opera. */
+        border: none;
+        /* Needs to be in here for Safari polyfill so background images work as expected. */
+        background-size: auto;
+    }
+    progress:not([value]), progress:not([value])::-webkit-progress-bar {
+        background: repeating-linear-gradient(45deg, #7e7e7e, #7e7e7e 10px, #5c5c5c 10px, #5c5c5c 20px);
+    }
+    .progress-bar-interrupted, .progress-bar-interrupted::-webkit-progress-bar {
+        background: #F44336;
+    }
+</style>
+</div>
+<div class="cell-output cell-output-display">
+
+    <div>
+      <progress value="0" class="" max="12" style="width:300px; height:20px; vertical-align: middle;"></progress>
+      
+    </div>
+    
+</div>
+<div class="cell-output cell-output-display">
+
+<style>
+    /* Turns off some styling */
+    progress {
+        /* gets rid of default border in Firefox and Opera. */
+        border: none;
+        /* Needs to be in here for Safari polyfill so background images work as expected. */
+        background-size: auto;
+    }
+    progress:not([value]), progress:not([value])::-webkit-progress-bar {
+        background: repeating-linear-gradient(45deg, #7e7e7e, #7e7e7e 10px, #5c5c5c 10px, #5c5c5c 20px);
+    }
+    .progress-bar-interrupted, .progress-bar-interrupted::-webkit-progress-bar {
+        background: #F44336;
+    }
+</style>
+</div>
+<div class="cell-output cell-output-display">
+
+</div>
+</div>
+<div id="ea4e99b5-c232-4f1d-998d-c4fbb3483dd3" class="cell" data-execution_count="31">
+<div class="sourceCode cell-code" id="cb40"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb40-1"><a href="#cb40-1" aria-hidden="true" tabindex="-1"></a>err <span class="op">=</span> <span class="bu">float</span>(err)</span>
+<span id="cb40-2"><a href="#cb40-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Test error rate: </span><span class="sc">{</span>err<span class="sc">:.4f}</span><span class="ss">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Test error rate: 0.1960</code></pre>
+</div>
+</div>
+</section>
+<section id="conclusion" class="level1">
+<h1>Conclusion</h1>
+<p>Ok, well how did we do? Fortunately we started with a baseline error rate of 0.27 to help us answer that question; which we beat with a final error rate of .196! I consider that successful because its a substantial improvement. I also read the <a href="https://www.robots.ox.ac.uk/~vgg/publications/2008/Nilsback08/">original paper</a> from 2008, which stated their best (SOTA) results were 72.8% accuracy (Or equivalently, a .272 error rate).</p>
+<section id="furthering-results" class="level2">
+<h2 class="anchored" data-anchor-id="furthering-results">Furthering Results</h2>
+<p>I am a bit of a perfectionist, so I like to comment on ways that I think this could be imporved further, but are outside of the time limit and scope (in my opinion)</p>
+<ul>
+<li>I would play around with the image sizes. I pretty arbitralily decided to resize the images to 500x500 pixels because they were all at least that size. There might be a better image resizing method that I’m not aware of.</li>
+<li>One of the constraints of this project was to use the resnet50 model. If I were to try and get better results I would probably try to ensemble the predictions of several models together.</li>
+<li>The fastai version of this dataset did not include the original image segmentations from the research paper. It would be a bit intesive, but my results would probably increase if I incorporated those segmentations into training.</li>
+<li>Speaking of training, why not just combine the validation set and training set into one training set? Technically we just wanted to get good results on the dataset, we don’t necessarily need the model to be robust. We could just do it this way, which would double our model’s training data and probably give us great results. Definitely a terrible idea if this model ever needed to enter something resembling production though.</li>
+</ul>
+
+
+</section>
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+window.document.addEventListener("DOMContentLoaded", function (event) {
+  const toggleBodyColorMode = (bsSheetEl) => {
+    const mode = bsSheetEl.getAttribute("data-mode");
+    const bodyEl = window.document.querySelector("body");
+    if (mode === "dark") {
+      bodyEl.classList.add("quarto-dark");
+      bodyEl.classList.remove("quarto-light");
+    } else {
+      bodyEl.classList.add("quarto-light");
+      bodyEl.classList.remove("quarto-dark");
+    }
+  }
+  const toggleBodyColorPrimary = () => {
+    const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+    if (bsSheetEl) {
+      toggleBodyColorMode(bsSheetEl);
+    }
+  }
+  toggleBodyColorPrimary();  
+  const icon = "";
+  const anchorJS = new window.AnchorJS();
+  anchorJS.options = {
+    placement: 'right',
+    icon: icon
+  };
+  anchorJS.add('.anchored');
+  const isCodeAnnotation = (el) => {
+    for (const clz of el.classList) {
+      if (clz.startsWith('code-annotation-')) {                     
+        return true;
+      }
+    }
+    return false;
+  }
+  const onCopySuccess = function(e) {
+    // button target
+    const button = e.trigger;
+    // don't keep focus
+    button.blur();
+    // flash "checked"
+    button.classList.add('code-copy-button-checked');
+    var currentTitle = button.getAttribute("title");
+    button.setAttribute("title", "Copied!");
+    let tooltip;
+    if (window.bootstrap) {
+      button.setAttribute("data-bs-toggle", "tooltip");
+      button.setAttribute("data-bs-placement", "left");
+      button.setAttribute("data-bs-title", "Copied!");
+      tooltip = new bootstrap.Tooltip(button, 
+        { trigger: "manual", 
+          customClass: "code-copy-button-tooltip",
+          offset: [0, -8]});
+      tooltip.show();    
+    }
+    setTimeout(function() {
+      if (tooltip) {
+        tooltip.hide();
+        button.removeAttribute("data-bs-title");
+        button.removeAttribute("data-bs-toggle");
+        button.removeAttribute("data-bs-placement");
+      }
+      button.setAttribute("title", currentTitle);
+      button.classList.remove('code-copy-button-checked');
+    }, 1000);
+    // clear code selection
+    e.clearSelection();
+  }
+  const getTextToCopy = function(trigger) {
+      const codeEl = trigger.previousElementSibling.cloneNode(true);
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+  }
+  const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+    text: getTextToCopy
+  });
+  clipboard.on('success', onCopySuccess);
+  if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+    const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+      text: getTextToCopy,
+      container: window.document.getElementById('quarto-embedded-source-code-modal')
+    });
+    clipboardModal.on('success', onCopySuccess);
+  }
+    var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+    var mailtoRegex = new RegExp(/^mailto:/);
+      var filterRegex = new RegExp("https:\/\/aaronjames95\.github\.io\/quarto_blog\/");
+    var isInternal = (href) => {
+        return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+    }
+    // Inspect non-navigation links and adorn them if external
+ 	var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+    for (var i=0; i<links.length; i++) {
+      const link = links[i];
+      if (!isInternal(link.href)) {
+        // undo the damage that might have been done by quarto-nav.js in the case of
+        // links that we want to consider external
+        if (link.dataset.originalHref !== undefined) {
+          link.href = link.dataset.originalHref;
+        }
+      }
+    }
+  function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+    const config = {
+      allowHTML: true,
+      maxWidth: 500,
+      delay: 100,
+      arrow: false,
+      appendTo: function(el) {
+          return el.parentElement;
+      },
+      interactive: true,
+      interactiveBorder: 10,
+      theme: 'quarto',
+      placement: 'bottom-start',
+    };
+    if (contentFn) {
+      config.content = contentFn;
+    }
+    if (onTriggerFn) {
+      config.onTrigger = onTriggerFn;
+    }
+    if (onUntriggerFn) {
+      config.onUntrigger = onUntriggerFn;
+    }
+    window.tippy(el, config); 
+  }
+  const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+  for (var i=0; i<noterefs.length; i++) {
+    const ref = noterefs[i];
+    tippyHover(ref, function() {
+      // use id or data attribute instead here
+      let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+      try { href = new URL(href).hash; } catch {}
+      const id = href.replace(/^#\/?/, "");
+      const note = window.document.getElementById(id);
+      if (note) {
+        return note.innerHTML;
+      } else {
+        return "";
+      }
+    });
+  }
+  const xrefs = window.document.querySelectorAll('a.quarto-xref');
+  const processXRef = (id, note) => {
+    // Strip column container classes
+    const stripColumnClz = (el) => {
+      el.classList.remove("page-full", "page-columns");
+      if (el.children) {
+        for (const child of el.children) {
+          stripColumnClz(child);
+        }
+      }
+    }
+    stripColumnClz(note)
+    if (id === null || id.startsWith('sec-')) {
+      // Special case sections, only their first couple elements
+      const container = document.createElement("div");
+      if (note.children && note.children.length > 2) {
+        container.appendChild(note.children[0].cloneNode(true));
+        for (let i = 1; i < note.children.length; i++) {
+          const child = note.children[i];
+          if (child.tagName === "P" && child.innerText === "") {
+            continue;
+          } else {
+            container.appendChild(child.cloneNode(true));
+            break;
+          }
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(container);
+        }
+        return container.innerHTML
+      } else {
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        return note.innerHTML;
+      }
+    } else {
+      // Remove any anchor links if they are present
+      const anchorLink = note.querySelector('a.anchorjs-link');
+      if (anchorLink) {
+        anchorLink.remove();
+      }
+      if (window.Quarto?.typesetMath) {
+        window.Quarto.typesetMath(note);
+      }
+      if (note.classList.contains("callout")) {
+        return note.outerHTML;
+      } else {
+        return note.innerHTML;
+      }
+    }
+  }
+  for (var i=0; i<xrefs.length; i++) {
+    const xref = xrefs[i];
+    tippyHover(xref, undefined, function(instance) {
+      instance.disable();
+      let url = xref.getAttribute('href');
+      let hash = undefined; 
+      if (url.startsWith('#')) {
+        hash = url;
+      } else {
+        try { hash = new URL(url).hash; } catch {}
+      }
+      if (hash) {
+        const id = hash.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note !== null) {
+          try {
+            const html = processXRef(id, note.cloneNode(true));
+            instance.setContent(html);
+          } finally {
+            instance.enable();
+            instance.show();
+          }
+        } else {
+          // See if we can fetch this
+          fetch(url.split('#')[0])
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.getElementById(id);
+            if (note !== null) {
+              const html = processXRef(id, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      } else {
+        // See if we can fetch a full url (with no hash to target)
+        // This is a special case and we should probably do some content thinning / targeting
+        fetch(url)
+        .then(res => res.text())
+        .then(html => {
+          const parser = new DOMParser();
+          const htmlDoc = parser.parseFromString(html, "text/html");
+          const note = htmlDoc.querySelector('main.content');
+          if (note !== null) {
+            // This should only happen for chapter cross references
+            // (since there is no id in the URL)
+            // remove the first header
+            if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+              note.children[0].remove();
+            }
+            const html = processXRef(null, note);
+            instance.setContent(html);
+          } 
+        }).finally(() => {
+          instance.enable();
+          instance.show();
+        });
+      }
+    }, function(instance) {
+    });
+  }
+      let selectedAnnoteEl;
+      const selectorForAnnotation = ( cell, annotation) => {
+        let cellAttr = 'data-code-cell="' + cell + '"';
+        let lineAttr = 'data-code-annotation="' +  annotation + '"';
+        const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+        return selector;
+      }
+      const selectCodeLines = (annoteEl) => {
+        const doc = window.document;
+        const targetCell = annoteEl.getAttribute("data-target-cell");
+        const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+        const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+        const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+        const lineIds = lines.map((line) => {
+          return targetCell + "-" + line;
+        })
+        let top = null;
+        let height = null;
+        let parent = null;
+        if (lineIds.length > 0) {
+            //compute the position of the single el (top and bottom and make a div)
+            const el = window.document.getElementById(lineIds[0]);
+            top = el.offsetTop;
+            height = el.offsetHeight;
+            parent = el.parentElement.parentElement;
+          if (lineIds.length > 1) {
+            const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+            const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+            height = bottom - top;
+          }
+          if (top !== null && height !== null && parent !== null) {
+            // cook up a div (if necessary) and position it 
+            let div = window.document.getElementById("code-annotation-line-highlight");
+            if (div === null) {
+              div = window.document.createElement("div");
+              div.setAttribute("id", "code-annotation-line-highlight");
+              div.style.position = 'absolute';
+              parent.appendChild(div);
+            }
+            div.style.top = top - 2 + "px";
+            div.style.height = height + 4 + "px";
+            div.style.left = 0;
+            let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+            if (gutterDiv === null) {
+              gutterDiv = window.document.createElement("div");
+              gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+              gutterDiv.style.position = 'absolute';
+              const codeCell = window.document.getElementById(targetCell);
+              const gutter = codeCell.querySelector('.code-annotation-gutter');
+              gutter.appendChild(gutterDiv);
+            }
+            gutterDiv.style.top = top - 2 + "px";
+            gutterDiv.style.height = height + 4 + "px";
+          }
+          selectedAnnoteEl = annoteEl;
+        }
+      };
+      const unselectCodeLines = () => {
+        const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+        elementsIds.forEach((elId) => {
+          const div = window.document.getElementById(elId);
+          if (div) {
+            div.remove();
+          }
+        });
+        selectedAnnoteEl = undefined;
+      };
+        // Handle positioning of the toggle
+    window.addEventListener(
+      "resize",
+      throttle(() => {
+        elRect = undefined;
+        if (selectedAnnoteEl) {
+          selectCodeLines(selectedAnnoteEl);
+        }
+      }, 10)
+    );
+    function throttle(fn, ms) {
+    let throttle = false;
+    let timer;
+      return (...args) => {
+        if(!throttle) { // first call gets through
+            fn.apply(this, args);
+            throttle = true;
+        } else { // all the others get throttled
+            if(timer) clearTimeout(timer); // cancel #2
+            timer = setTimeout(() => {
+              fn.apply(this, args);
+              timer = throttle = false;
+            }, ms);
+        }
+      };
+    }
+      // Attach click handler to the DT
+      const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+      for (const annoteDlNode of annoteDls) {
+        annoteDlNode.addEventListener('click', (event) => {
+          const clickedEl = event.target;
+          if (clickedEl !== selectedAnnoteEl) {
+            unselectCodeLines();
+            const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+            if (activeEl) {
+              activeEl.classList.remove('code-annotation-active');
+            }
+            selectCodeLines(clickedEl);
+            clickedEl.classList.add('code-annotation-active');
+          } else {
+            // Unselect the line
+            unselectCodeLines();
+            clickedEl.classList.remove('code-annotation-active');
+          }
+        });
+      }
+  const findCites = (el) => {
+    const parentEl = el.parentElement;
+    if (parentEl) {
+      const cites = parentEl.dataset.cites;
+      if (cites) {
+        return {
+          el,
+          cites: cites.split(' ')
+        };
+      } else {
+        return findCites(el.parentElement)
+      }
+    } else {
+      return undefined;
+    }
+  };
+  var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+  for (var i=0; i<bibliorefs.length; i++) {
+    const ref = bibliorefs[i];
+    const citeInfo = findCites(ref);
+    if (citeInfo) {
+      tippyHover(citeInfo.el, function() {
+        var popup = window.document.createElement('div');
+        citeInfo.cites.forEach(function(cite) {
+          var citeDiv = window.document.createElement('div');
+          citeDiv.classList.add('hanging-indent');
+          citeDiv.classList.add('csl-entry');
+          var biblioDiv = window.document.getElementById('ref-' + cite);
+          if (biblioDiv) {
+            citeDiv.innerHTML = biblioDiv.innerHTML;
+          }
+          popup.appendChild(citeDiv);
+        });
+        return popup.innerHTML;
+      });
+    }
+  }
+});
+</script>
+</div> <!-- /content -->
+
+
+
+
+</body></html>
