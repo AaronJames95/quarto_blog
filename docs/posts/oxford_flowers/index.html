@@ -1571,11 +1571,11 @@ Test error rate: 0.270</code></pre>
 <p>Ok, well how did we do? Fortunately we started with a baseline error rate of 0.27 to help us answer that question; which we beat with a final error rate of .196! I consider that successful because its a substantial improvement. I also read the <a href="https://www.robots.ox.ac.uk/~vgg/publications/2008/Nilsback08/">original paper</a> from 2008, which stated their best (SOTA) results were 72.8% accuracy (Or equivalently, a .272 error rate).</p>
 <section id="furthering-results" class="level2">
 <h2 class="anchored" data-anchor-id="furthering-results">Furthering Results</h2>
-<p>I am a bit of a perfectionist, so I like to comment on ways that I think this could be imporved further, but are outside of the time limit and scope (in my opinion)</p>
+<p>I am a bit of a perfectionist, so I like to comment on ways that I think this could be improved further, but are outside of the time limit and scope (in my opinion)</p>
 <ul>
-<li>I would play around with the image sizes. I pretty arbitralily decided to resize the images to 500x500 pixels because they were all at least that size. There might be a better image resizing method that I’m not aware of.</li>
+<li>I would play around with the image sizes. I pretty arbitrarily decided to resize the images to 500x500 pixels because they were all at least that size. There might be a better image resizing method that I’m not aware of.</li>
 <li>One of the constraints of this project was to use the resnet50 model. If I were to try and get better results I would probably try to ensemble the predictions of several models together.</li>
-<li>The fastai version of this dataset did not include the original image segmentations from the research paper. It would be a bit intesive, but my results would probably increase if I incorporated those segmentations into training.</li>
+<li>The fastai version of this dataset did not include the original image segmentations from the research paper. It would be a bit intensive, but my results would probably increase if I incorporated those segmentations into training.</li>
 <li>Speaking of training, why not just combine the validation set and training set into one training set? Technically we just wanted to get good results on the dataset, we don’t necessarily need the model to be robust. We could just do it this way, which would double our model’s training data and probably give us great results. Definitely a terrible idea if this model ever needed to enter something resembling production though.</li>
 </ul>
 
